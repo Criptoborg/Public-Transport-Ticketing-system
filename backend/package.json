@@ -2,10 +2,10 @@
   "name": "public-transport-ticketing-backend",
   "version": "1.0.0",
   "description": "Backend API for a public transport ticketing MVP",
-  "main": "app.js",
+  "main": "src/app.js",
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js"
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

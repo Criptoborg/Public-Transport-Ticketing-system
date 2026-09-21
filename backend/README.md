@@ -118,15 +118,16 @@ Example booking response data includes `ticketReference`, `amount`, `status`, `p
 
 ```text
 backend/
-├── config/db.js
-├── controllers/
-├── middleware/
-├── models/
-├── routes/
-├── services/
-├── utils/generateTicketReference.js
+├── src/
+│   ├── config/db.js
+│   ├── controllers/
+│   ├── middleware/
+│   ├── models/
+│   ├── routes/
+│   ├── services/
+│   ├── utils/generateTicketReference.js
+│   └── app.js
 ├── .env.example
-├── app.js
 ├── package.json
 └── README.md
 ```
