@@ -5,7 +5,7 @@ const generateTicketReference = require('../utils/generateTicketReference');
 
 const ticketDetails = (query) => Ticket.find(query)
   .populate('user', 'name email')
-  .populate({ path: 'trip', populate: { path: 'route', select: 'origin destination fare status' } })
+  .populate({ path: 'trip', populate: { path: 'route', select: 'origin destination fare distanceKm status' } })
   .sort({ purchaseDate: -1 });
 
 const createTicket = async (req, res, next) => {
