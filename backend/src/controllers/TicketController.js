@@ -14,20 +14,37 @@ const createTicket = async (req, res, next) => {
     if (!tripId) return res.status(400).json({ success: false, message: 'Trip is required', data: null });
     if (!mongoose.isValidObjectId(tripId)) return res.status(400).json({ success: false, message: 'Invalid trip ID', data: null });
 
-    const trip = await Trip.findById(tripId).populate('route');
-    if (!trip) return res.status(404).json({ success: false, message: 'Trip not found', data: null });
-    if (trip.status !== 'scheduled') return res.status(400).json({ success: false, message: 'Only scheduled trips can be booked', data: null });
-    if (trip.availableSeats <= 0) return res.status(400).json({ success: false, message: 'No seats are available for this trip', data: null });
+    const trip = await Trip.findOneAndUpdate(
+      { _id: tripId, status: 'scheduled', availableSeats: { $gt: 0 } },
+      { $inc: { availableSeats: -1 } },
+      { new: true }
+    ).populate('route');
+
+    if (!trip) {
+      const existingTrip = await Trip.findById(tripId).select('status availableSeats');
+      if (!existingTrip) return res.status(404).json({ success: false, message: 'Trip not found', data: null });
+      if (existingTrip.status !== 'scheduled') return res.status(400).json({ success: false, message: 'Only scheduled trips can be booked', data: null });
+      return res.status(400).json({ success: false, message: 'No seats are available for this trip', data: null });
+    }
+
+    if (!trip.route) {
+      await Trip.updateOne({ _id: trip._id }, { $inc: { availableSeats: 1 } });
+      return res.status(400).json({ success: false, message: 'Trip route not found', data: null });
+    }
 
     // The fare comes from the stored Route, never from a client-supplied amount.
-    const ticket = await Ticket.create({
-      user: req.user.id,
-      trip: trip._id,
-      ticketReference: generateTicketReference(),
-      amount: trip.route.fare
-    });
-    trip.availableSeats -= 1;
-    await trip.save();
+    let ticket;
+    try {
+      ticket = await Ticket.create({
+        user: req.user.id,
+        trip: trip._id,
+        ticketReference: generateTicketReference(),
+        amount: trip.route.fare
+      });
+    } catch (error) {
+      await Trip.updateOne({ _id: trip._id }, { $inc: { availableSeats: 1 } });
+      throw error;
+    }
 
     res.status(201).json({ success: true, message: 'Ticket created successfully', data: await ticketDetails({ _id: ticket._id }).then((items) => items[0]) });
   } catch (error) { next(error); }
