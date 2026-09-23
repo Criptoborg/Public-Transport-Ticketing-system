@@ -68,4 +68,32 @@ const getTicket = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-module.exports = { createTicket, getMyTickets, getTicket, ticketDetails };
+const cancelTicket = async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid ticket ID', data: null });
+
+    const ticket = await Ticket.findOneAndUpdate(
+      { _id: req.params.id, user: req.user.id, status: 'active' },
+      { status: 'cancelled' },
+      { new: true }
+    );
+
+    if (!ticket) {
+      const existingTicket = await Ticket.findById(req.params.id).select('user status');
+      if (!existingTicket) return res.status(404).json({ success: false, message: 'Ticket not found', data: null });
+      if (existingTicket.user.toString() !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'You can only cancel your own tickets', data: null });
+      return res.status(400).json({ success: false, message: 'Only active tickets can be cancelled', data: null });
+    }
+
+    try {
+      await Trip.updateOne({ _id: ticket.trip }, { $inc: { availableSeats: 1 } });
+    } catch (error) {
+      await Ticket.updateOne({ _id: ticket._id, status: 'cancelled' }, { status: 'active' });
+      throw error;
+    }
+
+    res.json({ success: true, message: 'Ticket cancelled successfully', data: await ticketDetails({ _id: ticket._id }).then((items) => items[0]) });
+  } catch (error) { next(error); }
+};
+
+module.exports = { createTicket, getMyTickets, getTicket, cancelTicket, ticketDetails };
