@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import api, { apiError, unwrap } from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import Notice from '../components/Notice';
-import StatusBadge from '../components/StatusBadge';
+import api, { apiError, unwrap } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import Notice from '../../components/common/Notice';
+import StatusBadge from '../../components/common/StatusBadge';
 
 const money = (value) => `₦${Number(value || 0).toLocaleString()}`;
 const date = (value) => new Date(value).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
