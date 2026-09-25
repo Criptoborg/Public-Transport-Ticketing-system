@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import api, { apiError, unwrap } from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import Notice from '../components/Notice';
+import api, { apiError, unwrap } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import Notice from '../../components/common/Notice';
 
 function AuthFrame({ eyebrow, title, children, footer }) { return <main className="auth-page"><div className="auth-panel"><p className="eyebrow">{eyebrow}</p><h1>{title}</h1>{children}{footer}</div><div className="auth-aside"><span className="aside-number">01</span><p>Move through the city with less waiting and more certainty.</p></div></main>; }
 function Field({ label, ...props }) { return <label className="field"><span>{label}</span><input {...props} /></label>; }

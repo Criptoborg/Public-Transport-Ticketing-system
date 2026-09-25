@@ -5,11 +5,22 @@ const calculateFare = (distanceKm) => {
   return Math.round(baseFare + (distanceKm * farePerKm));
 };
 
+const calculateStraightLineDistance = (originCoordinates, destinationCoordinates) => {
+  const toRadians = (degrees) => degrees * (Math.PI / 180);
+  const latitudeDifference = toRadians(destinationCoordinates.latitude - originCoordinates.latitude);
+  const longitudeDifference = toRadians(destinationCoordinates.longitude - originCoordinates.longitude);
+  const originLatitude = toRadians(originCoordinates.latitude);
+  const destinationLatitude = toRadians(destinationCoordinates.latitude);
+  const earthRadiusKm = 6371;
+  const haversine = Math.sin(latitudeDifference / 2) ** 2
+    + Math.cos(originLatitude) * Math.cos(destinationLatitude) * Math.sin(longitudeDifference / 2) ** 2;
+  return 2 * earthRadiusKm * Math.asin(Math.sqrt(haversine));
+};
+
 const calculateRouteFare = async (originCoordinates, destinationCoordinates) => {
   if (!process.env.OPENROUTESERVICE_API_KEY) {
-    const error = new Error('Routing service is not configured');
-    error.statusCode = 503;
-    throw error;
+    const distanceKm = calculateStraightLineDistance(originCoordinates, destinationCoordinates);
+    return { distanceKm: Number(distanceKm.toFixed(2)), fare: calculateFare(distanceKm) };
   }
 
   const params = new URLSearchParams({

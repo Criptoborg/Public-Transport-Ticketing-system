@@ -3,8 +3,8 @@ const Route = require('../models/Route');
 const { calculateRouteFare } = require('../services/fareService');
 
 const getCalculatedFare = async (body) => {
-  const hasOriginCoordinates = body.originCoordinates !== undefined;
-  const hasDestinationCoordinates = body.destinationCoordinates !== undefined;
+  const hasOriginCoordinates = body.originCoordinates !== undefined && body.originCoordinates !== null;
+  const hasDestinationCoordinates = body.destinationCoordinates !== undefined && body.destinationCoordinates !== null;
   if (hasOriginCoordinates !== hasDestinationCoordinates) {
     const error = new Error('Both originCoordinates and destinationCoordinates are required for automatic fare calculation');
     error.statusCode = 400;
@@ -12,13 +12,14 @@ const getCalculatedFare = async (body) => {
   }
   if (!hasOriginCoordinates) return null;
   const coordinatesAreValid = [body.originCoordinates, body.destinationCoordinates].every((coordinates) => (
-    coordinates && Number.isFinite(Number(coordinates.latitude)) && Number.isFinite(Number(coordinates.longitude))
+    coordinates && coordinates.latitude !== null && coordinates.longitude !== null
+      && coordinates.latitude !== '' && coordinates.longitude !== ''
+      && Number.isFinite(Number(coordinates.latitude)) && Number.isFinite(Number(coordinates.longitude))
   ));
-  if (!coordinatesAreValid) {
-    const error = new Error('Coordinate pairs must include numeric latitude and longitude values');
-    error.statusCode = 400;
-    throw error;
-  }
+  if (!coordinatesAreValid) return null;
+  const coordinatesAreBlank = [body.originCoordinates, body.destinationCoordinates]
+    .every((coordinates) => Number(coordinates.latitude) === 0 && Number(coordinates.longitude) === 0);
+  if (coordinatesAreBlank) return null;
   return calculateRouteFare(body.originCoordinates, body.destinationCoordinates);
 };
 
@@ -46,8 +47,9 @@ const createRoute = async (req, res, next) => {
   try {
     const { origin, destination, fare, status, originCoordinates, destinationCoordinates } = req.body;
     const calculated = await getCalculatedFare(req.body);
-    if (!origin || !destination || (fare === undefined && !calculated)) return res.status(400).json({ success: false, message: 'Origin, destination and fare are required unless coordinates are provided for automatic calculation', data: null });
-    const route = await Route.create({ origin, destination, fare: calculated?.fare ?? fare, distanceKm: calculated?.distanceKm, originCoordinates, destinationCoordinates, status });
+    if (!origin || !destination) return res.status(400).json({ success: false, message: 'Origin and destination are required', data: null });
+    const routeFare = fare !== undefined && Number(fare) > 0 ? Number(fare) : calculated?.fare ?? Number(process.env.BASE_FARE || 300);
+    const route = await Route.create({ origin, destination, fare: routeFare, distanceKm: calculated?.distanceKm, originCoordinates, destinationCoordinates, status });
     res.status(201).json({ success: true, message: 'Route created successfully', data: route });
   } catch (error) { next(error); }
 };
@@ -60,7 +62,9 @@ const updateRoute = async (req, res, next) => {
     const update = { ...req.body };
     const merged = { originCoordinates: req.body.originCoordinates ?? existingRoute.originCoordinates, destinationCoordinates: req.body.destinationCoordinates ?? existingRoute.destinationCoordinates };
     const calculated = await getCalculatedFare(merged);
-    if (calculated) {
+    if (req.body.fare !== undefined && Number(req.body.fare) > 0) {
+      update.fare = Number(req.body.fare);
+    } else if (calculated) {
       update.fare = calculated.fare;
       update.distanceKm = calculated.distanceKm;
     }
