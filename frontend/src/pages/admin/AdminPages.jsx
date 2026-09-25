@@ -1,19 +1,1038 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import api, { apiError, unwrap } from '../../services/api';
-import Notice from '../../components/common/Notice';
-import StatusBadge from '../../components/common/StatusBadge';
+// import { useEffect, useState } from "react";
+// import { Link } from "react-router-dom";
+// import api, { apiError, unwrap } from "../../services/api";
+// import Notice from "../../components/common/Notice";
+// import StatusBadge from "../../components/common/StatusBadge";
+// import Sidebar from '../../components/layout/Sidebar'; 
+
+// const money = (value) => `₦${Number(value || 0).toLocaleString()}`;
+// const date = (value) =>
+//   new Date(value).toLocaleString([], {
+//     dateStyle: "medium",
+//     timeStyle: "short",
+//   });
+// function AdminLayout({ eyebrow, title, children }) {
+//   return (
+//     <main className="page-shell">
+//       <div className="page-title">
+//         <div>
+//           <p className="eyebrow">{eyebrow}</p>
+//           <h1>{title}</h1>
+//         </div>
+//       </div>
+//       {children}
+//     </main>
+//   );
+// }
+// function AdminNav() {
+//   return (
+//     <div className="admin-nav">
+//       <Link to="/admin/routes">Routes</Link>
+//       <Link to="/admin/trips">Trips</Link>
+//       <Link to="/admin/tickets">Tickets</Link>
+//     </div>
+//   );
+// }
+// export function AdminDashboard() {
+//   const [counts, setCounts] = useState({ routes: 0, trips: 0, tickets: 0 });
+//   useEffect(() => {
+//     Promise.all([
+//       api.get("/api/routes"),
+//       api.get("/api/trips"),
+//       api.get("/api/admin/tickets"),
+//     ]).then(([routes, trips, tickets]) =>
+//       setCounts({
+//         routes: unwrap(routes).data?.length || 0,
+//         trips: unwrap(trips).data?.length || 0,
+//         tickets: unwrap(tickets).data?.length || 0,
+//       }),
+//     );
+//   }, []);
+//   return (
+//     <AdminLayout eyebrow="OPERATIONS" title="Control room">
+//       <AdminNav />
+//       <section className="admin-grid">
+//         {[
+//           ["Routes", counts.routes, "/admin/routes"],
+//           ["Trips", counts.trips, "/admin/trips"],
+//           ["Tickets", counts.tickets, "/admin/tickets"],
+//         ].map(([label, value, href]) => (
+//           <Link className="admin-stat" to={href} key={label}>
+//             <span>{label}</span>
+//             <strong>{value}</strong>
+//             <small>Manage records →</small>
+//           </Link>
+//         ))}
+//       </section>
+//     </AdminLayout>
+//   );
+// }
+
+// const blankRoute = {
+//   origin: "",
+//   destination: "",
+//   fare: "",
+//   status: "active",
+//   originLatitude: "",
+//   originLongitude: "",
+//   destinationLatitude: "",
+//   destinationLongitude: "",
+// };
+// export function AdminRoutes() {
+//   const [routes, setRoutes] = useState([]);
+//   const [form, setForm] = useState(blankRoute);
+//   const [editing, setEditing] = useState(null);
+//   const [state, setState] = useState({
+//     loading: true,
+//     saving: false,
+//     error: "",
+//     success: "",
+//   });
+//   const load = () =>
+//     api
+//       .get("/api/routes")
+//       .then((response) => setRoutes(unwrap(response).data || []))
+//       .catch((err) => setState((s) => ({ ...s, error: apiError(err) })))
+//       .finally(() => setState((s) => ({ ...s, loading: false })));
+//   useEffect(() => {
+//     load();
+//   }, []);
+//   const submit = async (event) => {
+//     event.preventDefault();
+//     setState({ ...state, saving: true, error: "", success: "" });
+//     const body = {
+//       origin: form.origin,
+//       destination: form.destination,
+//       status: form.status,
+//       originCoordinates: {
+//         latitude: Number(form.originLatitude),
+//         longitude: Number(form.originLongitude),
+//       },
+//       destinationCoordinates: {
+//         latitude: Number(form.destinationLatitude),
+//         longitude: Number(form.destinationLongitude),
+//       },
+//     };
+//     try {
+//       const response = editing
+//         ? await api.put(`/api/routes/${editing}`, body)
+//         : await api.post("/api/routes", body);
+//       setState({
+//         ...state,
+//         saving: false,
+//         success: unwrap(response).message,
+//         error: "",
+//       });
+//       setForm(blankRoute);
+//       setEditing(null);
+//       load();
+//     } catch (error) {
+//       setState({
+//         ...state,
+//         saving: false,
+//         success: "",
+//         error: apiError(error),
+//       });
+//     }
+//   };
+//   const edit = (route) => {
+//     setEditing(route._id);
+//     setForm({
+//       origin: route.origin,
+//       destination: route.destination,
+//       status: route.status,
+//       originLatitude: route.originCoordinates?.latitude ?? "",
+//       originLongitude: route.originCoordinates?.longitude ?? "",
+//       destinationLatitude: route.destinationCoordinates?.latitude ?? "",
+//       destinationLongitude: route.destinationCoordinates?.longitude ?? "",
+//     });
+//   };
+//   const remove = async (id) => {
+//     if (!window.confirm("Delete this route?")) return;
+//     try {
+//       await api.delete(`/api/routes/${id}`);
+//       load();
+//     } catch (error) {
+//       setState((s) => ({ ...s, error: apiError(error) }));
+//     }
+//   };
+//   return (
+//     <AdminLayout eyebrow="NETWORK DESIGN" title="Routes">
+//       <AdminNav />
+//       <Notice type="success">{state.success}</Notice>
+//       <Notice>{state.error}</Notice>
+//       <div className="admin-two-col">
+//         <form className="admin-form" onSubmit={submit}>
+//           <h2>{editing ? "Edit route" : "Create route"}</h2>
+//           <label className="field">
+//             <span>Origin</span>
+//             <input
+//               required
+//               value={form.origin}
+//               onChange={(e) => setForm({ ...form, origin: e.target.value })}
+//             />
+//           </label>
+//           <label className="field">
+//             <span>Destination</span>
+//             <input
+//               required
+//               value={form.destination}
+//               onChange={(e) =>
+//                 setForm({ ...form, destination: e.target.value })
+//               }
+//             />
+//           </label>
+//           <div className="form-section-label">Origin coordinates</div>
+//           <div className="two-fields">
+//             <input
+//               aria-label="Origin latitude"
+//               type="number"
+//               step="any"
+//               placeholder="Latitude"
+//               required
+//               value={form.originLatitude}
+//               onChange={(e) =>
+//                 setForm({ ...form, originLatitude: e.target.value })
+//               }
+//             />
+//             <input
+//               aria-label="Origin longitude"
+//               type="number"
+//               step="any"
+//               placeholder="Longitude"
+//               required
+//               value={form.originLongitude}
+//               onChange={(e) =>
+//                 setForm({ ...form, originLongitude: e.target.value })
+//               }
+//             />
+//           </div>
+//           <div className="form-section-label">Destination coordinates</div>
+//           <div className="two-fields">
+//             <input
+//               aria-label="Destination latitude"
+//               type="number"
+//               step="any"
+//               placeholder="Latitude"
+//               required
+//               value={form.destinationLatitude}
+//               onChange={(e) =>
+//                 setForm({ ...form, destinationLatitude: e.target.value })
+//               }
+//             />
+//             <input
+//               aria-label="Destination longitude"
+//               type="number"
+//               step="any"
+//               placeholder="Longitude"
+//               required
+//               value={form.destinationLongitude}
+//               onChange={(e) =>
+//                 setForm({ ...form, destinationLongitude: e.target.value })
+//               }
+//             />
+//           </div>
+//           <button className="button button-primary" disabled={state.saving}>
+//             {state.saving
+//               ? "Saving route..."
+//               : editing
+//                 ? "Update route"
+//                 : "Calculate and create"}
+//           </button>
+//           {editing && (
+//             <button
+//               type="button"
+//               className="button button-quiet"
+//               onClick={() => {
+//                 setEditing(null);
+//                 setForm(blankRoute);
+//               }}
+//             >
+//               Cancel edit
+//             </button>
+//           )}
+//         </form>
+//         <div className="admin-list">
+//           {state.loading ? (
+//             <p>Loading routes...</p>
+//           ) : (
+//             routes.map((route) => (
+//               <article className="admin-row" key={route._id}>
+//                 <div>
+//                   <strong>
+//                     {route.origin} → {route.destination}
+//                   </strong>
+//                   <span>
+//                     {route.distanceKm ? `${route.distanceKm} km · ` : ""}
+//                     {money(route.fare)}
+//                   </span>
+//                 </div>
+//                 <div className="row-actions">
+//                   <StatusBadge value={route.status} />
+//                   <button onClick={() => edit(route)}>Edit</button>
+//                   <button onClick={() => remove(route._id)}>Delete</button>
+//                 </div>
+//               </article>
+//             ))
+//           )}
+//         </div>
+//       </div>
+//     </AdminLayout>
+//   );
+// }
+
+// const blankTrip = {
+//   route: "",
+//   departureTime: "",
+//   arrivalTime: "",
+//   availableSeats: "",
+//   status: "scheduled",
+// };
+// export function AdminTrips() {
+//   const [routes, setRoutes] = useState([]);
+//   const [trips, setTrips] = useState([]);
+//   const [form, setForm] = useState(blankTrip);
+//   const [editing, setEditing] = useState(null);
+//   const [state, setState] = useState({
+//     loading: true,
+//     saving: false,
+//     error: "",
+//     success: "",
+//   });
+//   const load = () =>
+//     Promise.all([api.get("/api/routes"), api.get("/api/trips")])
+//       .then(([routeResponse, tripResponse]) => {
+//         setRoutes(unwrap(routeResponse).data || []);
+//         setTrips(unwrap(tripResponse).data || []);
+//       })
+//       .catch((err) => setState((s) => ({ ...s, error: apiError(err) })))
+//       .finally(() => setState((s) => ({ ...s, loading: false })));
+//   useEffect(() => {
+//     load();
+//   }, []);
+//   const submit = async (event) => {
+//     event.preventDefault();
+//     setState({ ...state, saving: true, error: "", success: "" });
+//     try {
+//       const response = editing
+//         ? await api.put(`/api/trips/${editing}`, {
+//             ...form,
+//             availableSeats: Number(form.availableSeats),
+//           })
+//         : await api.post("/api/trips", {
+//             ...form,
+//             availableSeats: Number(form.availableSeats),
+//           });
+//       setState({
+//         ...state,
+//         saving: false,
+//         success: unwrap(response).message,
+//         error: "",
+//       });
+//       setForm(blankTrip);
+//       setEditing(null);
+//       load();
+//     } catch (error) {
+//       setState({
+//         ...state,
+//         saving: false,
+//         success: "",
+//         error: apiError(error),
+//       });
+//     }
+//   };
+//   const edit = (trip) =>
+//     setEditing(trip._id) ||
+//     setForm({
+//       route: trip.route?._id || trip.route || "",
+//       departureTime: trip.departureTime?.slice(0, 16),
+//       arrivalTime: trip.arrivalTime?.slice(0, 16),
+//       availableSeats: trip.availableSeats,
+//       status: trip.status,
+//     });
+//   const remove = async (id) => {
+//     if (!window.confirm("Delete this trip?")) return;
+//     try {
+//       await api.delete(`/api/trips/${id}`);
+//       load();
+//     } catch (error) {
+//       setState((s) => ({ ...s, error: apiError(error) }));
+//     }
+//   };
+//   return (
+//     <AdminLayout eyebrow="SCHEDULES" title="Trips">
+//       <AdminNav />
+//       <Notice type="success">{state.success}</Notice>
+//       <Notice>{state.error}</Notice>
+//       <div className="admin-two-col">
+//         <form className="admin-form" onSubmit={submit}>
+//           <h2>{editing ? "Edit trip" : "Schedule a trip"}</h2>
+//           <label className="field">
+//             <span>Route</span>
+//             <select
+//               required
+//               value={form.route}
+//               onChange={(e) => setForm({ ...form, route: e.target.value })}
+//             >
+//               <option value="">Select route</option>
+//               {routes.map((route) => (
+//                 <option value={route._id} key={route._id}>
+//                   {route.origin} → {route.destination}
+//                 </option>
+//               ))}
+//             </select>
+//           </label>
+//           <label className="field">
+//             <span>Departure</span>
+//             <input
+//               type="datetime-local"
+//               required
+//               value={form.departureTime}
+//               onChange={(e) =>
+//                 setForm({ ...form, departureTime: e.target.value })
+//               }
+//             />
+//           </label>
+//           <label className="field">
+//             <span>Arrival</span>
+//             <input
+//               type="datetime-local"
+//               required
+//               value={form.arrivalTime}
+//               onChange={(e) =>
+//                 setForm({ ...form, arrivalTime: e.target.value })
+//               }
+//             />
+//           </label>
+//           <label className="field">
+//             <span>Available seats</span>
+//             <input
+//               type="number"
+//               min="0"
+//               required
+//               value={form.availableSeats}
+//               onChange={(e) =>
+//                 setForm({ ...form, availableSeats: e.target.value })
+//               }
+//             />
+//           </label>
+//           <label className="field">
+//             <span>Status</span>
+//             <select
+//               value={form.status}
+//               onChange={(e) => setForm({ ...form, status: e.target.value })}
+//             >
+//               <option value="scheduled">scheduled</option>
+//               <option value="completed">completed</option>
+//               <option value="cancelled">cancelled</option>
+//             </select>
+//           </label>
+//           <button className="button button-primary" disabled={state.saving}>
+//             {state.saving
+//               ? "Saving trip..."
+//               : editing
+//                 ? "Update trip"
+//                 : "Create trip"}
+//           </button>
+//           {editing && (
+//             <button
+//               type="button"
+//               className="button button-quiet"
+//               onClick={() => {
+//                 setEditing(null);
+//                 setForm(blankTrip);
+//               }}
+//             >
+//               Cancel edit
+//             </button>
+//           )}
+//         </form>
+//         <div className="admin-list">
+//           {state.loading ? (
+//             <p>Loading trips...</p>
+//           ) : (
+//             trips.map((trip) => (
+//               <article className="admin-row" key={trip._id}>
+//                 <div>
+//                   <strong>
+//                     {trip.route?.origin} → {trip.route?.destination}
+//                   </strong>
+//                   <span>
+//                     {date(trip.departureTime)} · {trip.availableSeats} seats ·{" "}
+//                     {money(trip.route?.fare)}
+//                   </span>
+//                 </div>
+//                 <div className="row-actions">
+//                   <StatusBadge value={trip.status} />
+//                   <button onClick={() => edit(trip)}>Edit</button>
+//                   <button onClick={() => remove(trip._id)}>Delete</button>
+//                 </div>
+//               </article>
+//             ))
+//           )}
+//         </div>
+//       </div>
+//     </AdminLayout>
+//   );
+// }
+
+// export function AdminTickets() {
+//   const [tickets, setTickets] = useState([]);
+//   const [state, setState] = useState({ loading: true, error: "" });
+//   const load = () =>
+//     api
+//       .get("/api/admin/tickets")
+//       .then((response) => setTickets(unwrap(response).data || []))
+//       .catch((err) => setState({ loading: false, error: apiError(err) }))
+//       .finally(() => setState((s) => ({ ...s, loading: false })));
+//   useEffect(() => {
+//     load();
+//   }, []);
+//   const update = async (id, status) => {
+//     try {
+//       await api.patch(`/api/admin/tickets/${id}/status`, { status });
+//       load();
+//     } catch (error) {
+//       setState((s) => ({ ...s, error: apiError(error) }));
+//     }
+//   };
+//   return (
+//     <AdminLayout eyebrow="BOOKING OPERATIONS" title="Issued tickets">
+//       <AdminNav />
+//       <Notice>{state.error}</Notice>
+//       {state.loading ? (
+//         <p>Loading tickets...</p>
+//       ) : (
+//         <div className="admin-list">
+//           {tickets.map((ticket) => (
+//             <article className="admin-row" key={ticket._id}>
+//               <div>
+//                 <strong>{ticket.ticketReference}</strong>
+//                 <span>
+//                   {ticket.user?.name} · {ticket.trip?.route?.origin} →{" "}
+//                   {ticket.trip?.route?.destination} · {money(ticket.amount)}
+//                 </span>
+//               </div>
+//               <select
+//                 value={ticket.status}
+//                 onChange={(e) => update(ticket._id, e.target.value)}
+//               >
+//                 <option value="active">active</option>
+//                 <option value="used">used</option>
+//                 <option value="cancelled">cancelled</option>
+//               </select>
+//             </article>
+//           ))}
+//         </div>
+//       )}
+//     </AdminLayout>
+//   );
+// }
+
+
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import api, { apiError, unwrap } from "../../services/api";
+import Notice from "../../components/common/Notice";
+import StatusBadge from "../../components/common/StatusBadge";
+import Sidebar from "../../components/layout/Sidebar"; 
 
 const money = (value) => `₦${Number(value || 0).toLocaleString()}`;
-const date = (value) => new Date(value).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-function AdminLayout({ eyebrow, title, children }) { return <main className="page-shell"><div className="page-title"><div><p className="eyebrow">{eyebrow}</p><h1>{title}</h1></div></div>{children}</main>; }
-function AdminNav() { return <div className="admin-nav"><Link to="/admin/routes">Routes</Link><Link to="/admin/trips">Trips</Link><Link to="/admin/tickets">Tickets</Link></div>; }
-export function AdminDashboard() { const [counts, setCounts] = useState({ routes: 0, trips: 0, tickets: 0 }); useEffect(() => { Promise.all([api.get('/api/routes'), api.get('/api/trips'), api.get('/api/admin/tickets')]).then(([routes, trips, tickets]) => setCounts({ routes: unwrap(routes).data?.length || 0, trips: unwrap(trips).data?.length || 0, tickets: unwrap(tickets).data?.length || 0 })); }, []); return <AdminLayout eyebrow="OPERATIONS" title="Control room"><AdminNav /><section className="admin-grid">{[['Routes', counts.routes, '/admin/routes'], ['Trips', counts.trips, '/admin/trips'], ['Tickets', counts.tickets, '/admin/tickets']].map(([label, value, href]) => <Link className="admin-stat" to={href} key={label}><span>{label}</span><strong>{value}</strong><small>Manage records →</small></Link>)}</section></AdminLayout>; }
+const date = (value) =>
+  new Date(value).toLocaleString([], {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 
-const blankRoute = { origin: '', destination: '', fare: '', status: 'active', originLatitude: '', originLongitude: '', destinationLatitude: '', destinationLongitude: '' };
-export function AdminRoutes() { const [routes, setRoutes] = useState([]); const [form, setForm] = useState(blankRoute); const [editing, setEditing] = useState(null); const [state, setState] = useState({ loading: true, saving: false, error: '', success: '' }); const load = () => api.get('/api/routes').then((response) => setRoutes(unwrap(response).data || [])).catch((err) => setState((s) => ({ ...s, error: apiError(err) }))).finally(() => setState((s) => ({ ...s, loading: false }))); useEffect(() => { load(); }, []); const submit = async (event) => { event.preventDefault(); setState({ ...state, saving: true, error: '', success: '' }); const body = { origin: form.origin, destination: form.destination, status: form.status, originCoordinates: { latitude: Number(form.originLatitude), longitude: Number(form.originLongitude) }, destinationCoordinates: { latitude: Number(form.destinationLatitude), longitude: Number(form.destinationLongitude) } }; try { const response = editing ? await api.put(`/api/routes/${editing}`, body) : await api.post('/api/routes', body); setState({ ...state, saving: false, success: unwrap(response).message, error: '' }); setForm(blankRoute); setEditing(null); load(); } catch (error) { setState({ ...state, saving: false, success: '', error: apiError(error) }); } }; const edit = (route) => { setEditing(route._id); setForm({ origin: route.origin, destination: route.destination, status: route.status, originLatitude: route.originCoordinates?.latitude ?? '', originLongitude: route.originCoordinates?.longitude ?? '', destinationLatitude: route.destinationCoordinates?.latitude ?? '', destinationLongitude: route.destinationCoordinates?.longitude ?? '' }); }; const remove = async (id) => { if (!window.confirm('Delete this route?')) return; try { await api.delete(`/api/routes/${id}`); load(); } catch (error) { setState((s) => ({ ...s, error: apiError(error) })); } }; return <AdminLayout eyebrow="NETWORK DESIGN" title="Routes"><AdminNav /><Notice type="success">{state.success}</Notice><Notice>{state.error}</Notice><div className="admin-two-col"><form className="admin-form" onSubmit={submit}><h2>{editing ? 'Edit route' : 'Create route'}</h2><label className="field"><span>Origin</span><input required value={form.origin} onChange={(e) => setForm({ ...form, origin: e.target.value })} /></label><label className="field"><span>Destination</span><input required value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} /></label><div className="form-section-label">Origin coordinates</div><div className="two-fields"><input aria-label="Origin latitude" type="number" step="any" placeholder="Latitude" required value={form.originLatitude} onChange={(e) => setForm({ ...form, originLatitude: e.target.value })} /><input aria-label="Origin longitude" type="number" step="any" placeholder="Longitude" required value={form.originLongitude} onChange={(e) => setForm({ ...form, originLongitude: e.target.value })} /></div><div className="form-section-label">Destination coordinates</div><div className="two-fields"><input aria-label="Destination latitude" type="number" step="any" placeholder="Latitude" required value={form.destinationLatitude} onChange={(e) => setForm({ ...form, destinationLatitude: e.target.value })} /><input aria-label="Destination longitude" type="number" step="any" placeholder="Longitude" required value={form.destinationLongitude} onChange={(e) => setForm({ ...form, destinationLongitude: e.target.value })} /></div><button className="button button-primary" disabled={state.saving}>{state.saving ? 'Saving route...' : editing ? 'Update route' : 'Calculate and create'}</button>{editing && <button type="button" className="button button-quiet" onClick={() => { setEditing(null); setForm(blankRoute); }}>Cancel edit</button>}</form><div className="admin-list">{state.loading ? <p>Loading routes...</p> : routes.map((route) => <article className="admin-row" key={route._id}><div><strong>{route.origin} → {route.destination}</strong><span>{route.distanceKm ? `${route.distanceKm} km · ` : ''}{money(route.fare)}</span></div><div className="row-actions"><StatusBadge value={route.status} /><button onClick={() => edit(route)}>Edit</button><button onClick={() => remove(route._id)}>Delete</button></div></article>)}</div></div></AdminLayout>; }
+// --- NEW LAYOUT WRAPPER WITH SIDEBAR ---
+function AdminPageLayout({ eyebrow, title, children }) {
+  return (
+    <div className="admin-layout">
+      <Sidebar />
+      <main className="admin-content page-shell">
+        <div className="page-title">
+          <div>
+            <p className="eyebrow">{eyebrow}</p>
+            <h1>{title}</h1>
+          </div>
+        </div>
+        {children}
+      </main>
+    </div>
+  );
+}
 
-const blankTrip = { route: '', departureTime: '', arrivalTime: '', availableSeats: '', status: 'scheduled' };
-export function AdminTrips() { const [routes, setRoutes] = useState([]); const [trips, setTrips] = useState([]); const [form, setForm] = useState(blankTrip); const [editing, setEditing] = useState(null); const [state, setState] = useState({ loading: true, saving: false, error: '', success: '' }); const load = () => Promise.all([api.get('/api/routes'), api.get('/api/trips')]).then(([routeResponse, tripResponse]) => { setRoutes(unwrap(routeResponse).data || []); setTrips(unwrap(tripResponse).data || []); }).catch((err) => setState((s) => ({ ...s, error: apiError(err) }))).finally(() => setState((s) => ({ ...s, loading: false }))); useEffect(() => { load(); }, []); const submit = async (event) => { event.preventDefault(); setState({ ...state, saving: true, error: '', success: '' }); try { const response = editing ? await api.put(`/api/trips/${editing}`, { ...form, availableSeats: Number(form.availableSeats) }) : await api.post('/api/trips', { ...form, availableSeats: Number(form.availableSeats) }); setState({ ...state, saving: false, success: unwrap(response).message, error: '' }); setForm(blankTrip); setEditing(null); load(); } catch (error) { setState({ ...state, saving: false, success: '', error: apiError(error) }); } }; const edit = (trip) => setEditing(trip._id) || setForm({ route: trip.route?._id || trip.route || '', departureTime: trip.departureTime?.slice(0, 16), arrivalTime: trip.arrivalTime?.slice(0, 16), availableSeats: trip.availableSeats, status: trip.status }); const remove = async (id) => { if (!window.confirm('Delete this trip?')) return; try { await api.delete(`/api/trips/${id}`); load(); } catch (error) { setState((s) => ({ ...s, error: apiError(error) })); } }; return <AdminLayout eyebrow="SCHEDULES" title="Trips"><AdminNav /><Notice type="success">{state.success}</Notice><Notice>{state.error}</Notice><div className="admin-two-col"><form className="admin-form" onSubmit={submit}><h2>{editing ? 'Edit trip' : 'Schedule a trip'}</h2><label className="field"><span>Route</span><select required value={form.route} onChange={(e) => setForm({ ...form, route: e.target.value })}><option value="">Select route</option>{routes.map((route) => <option value={route._id} key={route._id}>{route.origin} → {route.destination}</option>)}</select></label><label className="field"><span>Departure</span><input type="datetime-local" required value={form.departureTime} onChange={(e) => setForm({ ...form, departureTime: e.target.value })} /></label><label className="field"><span>Arrival</span><input type="datetime-local" required value={form.arrivalTime} onChange={(e) => setForm({ ...form, arrivalTime: e.target.value })} /></label><label className="field"><span>Available seats</span><input type="number" min="0" required value={form.availableSeats} onChange={(e) => setForm({ ...form, availableSeats: e.target.value })} /></label><label className="field"><span>Status</span><select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="scheduled">scheduled</option><option value="completed">completed</option><option value="cancelled">cancelled</option></select></label><button className="button button-primary" disabled={state.saving}>{state.saving ? 'Saving trip...' : editing ? 'Update trip' : 'Create trip'}</button>{editing && <button type="button" className="button button-quiet" onClick={() => { setEditing(null); setForm(blankTrip); }}>Cancel edit</button>}</form><div className="admin-list">{state.loading ? <p>Loading trips...</p> : trips.map((trip) => <article className="admin-row" key={trip._id}><div><strong>{trip.route?.origin} → {trip.route?.destination}</strong><span>{date(trip.departureTime)} · {trip.availableSeats} seats · {money(trip.route?.fare)}</span></div><div className="row-actions"><StatusBadge value={trip.status} /><button onClick={() => edit(trip)}>Edit</button><button onClick={() => remove(trip._id)}>Delete</button></div></article>)}</div></div></AdminLayout>; }
+export function AdminDashboard() {
+  const [counts, setCounts] = useState({ routes: 0, trips: 0, tickets: 0 });
+  useEffect(() => {
+    Promise.all([
+      api.get("/api/routes"),
+      api.get("/api/trips"),
+      api.get("/api/admin/tickets"),
+    ]).then(([routes, trips, tickets]) =>
+      setCounts({
+        routes: unwrap(routes).data?.length || 0,
+        trips: unwrap(trips).data?.length || 0,
+        tickets: unwrap(tickets).data?.length || 0,
+      }),
+    );
+  }, []);
+  
+  return (
+    <AdminPageLayout eyebrow="OPERATIONS" title="Control room">
+      <section className="admin-grid">
+        {[
+          ["Routes", counts.routes, "/admin/routes"],
+          ["Trips", counts.trips, "/admin/trips"],
+          ["Tickets", counts.tickets, "/admin/tickets"],
+        ].map(([label, value, href]) => (
+          <Link className="admin-stat" to={href} key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+            <small>Manage records →</small>
+          </Link>
+        ))}
+      </section>
+    </AdminPageLayout>
+  );
+}
 
-export function AdminTickets() { const [tickets, setTickets] = useState([]); const [state, setState] = useState({ loading: true, error: '' }); const load = () => api.get('/api/admin/tickets').then((response) => setTickets(unwrap(response).data || [])).catch((err) => setState({ loading: false, error: apiError(err) })).finally(() => setState((s) => ({ ...s, loading: false }))); useEffect(() => { load(); }, []); const update = async (id, status) => { try { await api.patch(`/api/admin/tickets/${id}/status`, { status }); load(); } catch (error) { setState((s) => ({ ...s, error: apiError(error) })); } }; return <AdminLayout eyebrow="BOOKING OPERATIONS" title="Issued tickets"><AdminNav /><Notice>{state.error}</Notice>{state.loading ? <p>Loading tickets...</p> : <div className="admin-list">{tickets.map((ticket) => <article className="admin-row" key={ticket._id}><div><strong>{ticket.ticketReference}</strong><span>{ticket.user?.name} · {ticket.trip?.route?.origin} → {ticket.trip?.route?.destination} · {money(ticket.amount)}</span></div><select value={ticket.status} onChange={(e) => update(ticket._id, e.target.value)}><option value="active">active</option><option value="used">used</option><option value="cancelled">cancelled</option></select></article>)}</div>}</AdminLayout>; }
+const blankRoute = {
+  origin: "",
+  destination: "",
+  fare: "",
+  status: "active",
+  originLatitude: "",
+  originLongitude: "",
+  destinationLatitude: "",
+  destinationLongitude: "",
+};
+
+export function AdminRoutes() {
+  const [routes, setRoutes] = useState([]);
+  const [form, setForm] = useState(blankRoute);
+  const [editing, setEditing] = useState(null);
+  const [state, setState] = useState({
+    loading: true,
+    saving: false,
+    error: "",
+    success: "",
+  });
+  
+  const load = () =>
+    api
+      .get("/api/routes")
+      .then((response) => setRoutes(unwrap(response).data || []))
+      .catch((err) => setState((s) => ({ ...s, error: apiError(err) })))
+      .finally(() => setState((s) => ({ ...s, loading: false })));
+      
+  useEffect(() => {
+    load();
+  }, []);
+  
+  const submit = async (event) => {
+    event.preventDefault();
+    setState({ ...state, saving: true, error: "", success: "" });
+    const body = {
+      origin: form.origin,
+      destination: form.destination,
+      status: form.status,
+      originCoordinates: {
+        latitude: Number(form.originLatitude),
+        longitude: Number(form.originLongitude),
+      },
+      destinationCoordinates: {
+        latitude: Number(form.destinationLatitude),
+        longitude: Number(form.destinationLongitude),
+      },
+    };
+    try {
+      const response = editing
+        ? await api.put(`/api/routes/${editing}`, body)
+        : await api.post("/api/routes", body);
+      setState({
+        ...state,
+        saving: false,
+        success: unwrap(response).message,
+        error: "",
+      });
+      setForm(blankRoute);
+      setEditing(null);
+      load();
+    } catch (error) {
+      setState({
+        ...state,
+        saving: false,
+        success: "",
+        error: apiError(error),
+      });
+    }
+  };
+  
+  const edit = (route) => {
+    setEditing(route._id);
+    setForm({
+      origin: route.origin,
+      destination: route.destination,
+      status: route.status,
+      originLatitude: route.originCoordinates?.latitude ?? "",
+      originLongitude: route.originCoordinates?.longitude ?? "",
+      destinationLatitude: route.destinationCoordinates?.latitude ?? "",
+      destinationLongitude: route.destinationCoordinates?.longitude ?? "",
+    });
+  };
+  
+  const remove = async (id) => {
+    if (!window.confirm("Delete this route?")) return;
+    try {
+      await api.delete(`/api/routes/${id}`);
+      load();
+    } catch (error) {
+      setState((s) => ({ ...s, error: apiError(error) }));
+    }
+  };
+  
+  return (
+    <AdminPageLayout eyebrow="NETWORK DESIGN" title="Routes">
+      <Notice type="success">{state.success}</Notice>
+      <Notice>{state.error}</Notice>
+      <div className="admin-two-col">
+        <form className="admin-form" onSubmit={submit}>
+          <h2>{editing ? "Edit route" : "Create route"}</h2>
+          <label className="field">
+            <span>Origin</span>
+            <input
+              required
+              value={form.origin}
+              onChange={(e) => setForm({ ...form, origin: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>Destination</span>
+            <input
+              required
+              value={form.destination}
+              onChange={(e) => setForm({ ...form, destination: e.target.value })}
+            />
+          </label>
+          <div className="form-section-label">Origin coordinates</div>
+          <div className="two-fields">
+            <input
+              aria-label="Origin latitude"
+              type="number"
+              step="any"
+              placeholder="Latitude"
+              required
+              value={form.originLatitude}
+              onChange={(e) => setForm({ ...form, originLatitude: e.target.value })}
+            />
+            <input
+              aria-label="Origin longitude"
+              type="number"
+              step="any"
+              placeholder="Longitude"
+              required
+              value={form.originLongitude}
+              onChange={(e) => setForm({ ...form, originLongitude: e.target.value })}
+            />
+          </div>
+          <div className="form-section-label">Destination coordinates</div>
+          <div className="two-fields">
+            <input
+              aria-label="Destination latitude"
+              type="number"
+              step="any"
+              placeholder="Latitude"
+              required
+              value={form.destinationLatitude}
+              onChange={(e) => setForm({ ...form, destinationLatitude: e.target.value })}
+            />
+            <input
+              aria-label="Destination longitude"
+              type="number"
+              step="any"
+              placeholder="Longitude"
+              required
+              value={form.destinationLongitude}
+              onChange={(e) => setForm({ ...form, destinationLongitude: e.target.value })}
+            />
+          </div>
+          <button className="button button-primary" disabled={state.saving}>
+            {state.saving ? "Saving route..." : editing ? "Update route" : "Calculate and create"}
+          </button>
+          {editing && (
+            <button
+              type="button"
+              className="button button-quiet"
+              onClick={() => {
+                setEditing(null);
+                setForm(blankRoute);
+              }}
+            >
+              Cancel edit
+            </button>
+          )}
+        </form>
+        <div className="admin-list">
+          {state.loading ? (
+            <p>Loading routes...</p>
+          ) : (
+            routes.map((route) => (
+              <article className="admin-row" key={route._id}>
+                <div>
+                  <strong>{route.origin} → {route.destination}</strong>
+                  <span>
+                    {route.distanceKm ? `${route.distanceKm} km · ` : ""}
+                    {money(route.fare)}
+                  </span>
+                </div>
+                <div className="row-actions">
+                  <StatusBadge value={route.status} />
+                  <button onClick={() => edit(route)}>Edit</button>
+                  <button onClick={() => remove(route._id)}>Delete</button>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+      </div>
+    </AdminPageLayout>
+  );
+}
+
+const blankTrip = {
+  route: "",
+  departureTime: "",
+  arrivalTime: "",
+  availableSeats: "",
+  status: "scheduled",
+};
+
+export function AdminTrips() {
+  const [routes, setRoutes] = useState([]);
+  const [trips, setTrips] = useState([]);
+  const [form, setForm] = useState(blankTrip);
+  const [editing, setEditing] = useState(null);
+  const [state, setState] = useState({
+    loading: true,
+    saving: false,
+    error: "",
+    success: "",
+  });
+  
+  const load = () =>
+    Promise.all([api.get("/api/routes"), api.get("/api/trips")])
+      .then(([routeResponse, tripResponse]) => {
+        setRoutes(unwrap(routeResponse).data || []);
+        setTrips(unwrap(tripResponse).data || []);
+      })
+      .catch((err) => setState((s) => ({ ...s, error: apiError(err) })))
+      .finally(() => setState((s) => ({ ...s, loading: false })));
+      
+  useEffect(() => {
+    load();
+  }, []);
+  
+  const submit = async (event) => {
+    event.preventDefault();
+    setState({ ...state, saving: true, error: "", success: "" });
+    try {
+      const response = editing
+        ? await api.put(`/api/trips/${editing}`, { ...form, availableSeats: Number(form.availableSeats) })
+        : await api.post("/api/trips", { ...form, availableSeats: Number(form.availableSeats) });
+      setState({
+        ...state,
+        saving: false,
+        success: unwrap(response).message,
+        error: "",
+      });
+      setForm(blankTrip);
+      setEditing(null);
+      load();
+    } catch (error) {
+      setState({
+        ...state,
+        saving: false,
+        success: "",
+        error: apiError(error),
+      });
+    }
+  };
+  
+  const edit = (trip) =>
+    setEditing(trip._id) ||
+    setForm({
+      route: trip.route?._id || trip.route || "",
+      departureTime: trip.departureTime?.slice(0, 16),
+      arrivalTime: trip.arrivalTime?.slice(0, 16),
+      availableSeats: trip.availableSeats,
+      status: trip.status,
+    });
+    
+  const remove = async (id) => {
+    if (!window.confirm("Delete this trip?")) return;
+    try {
+      await api.delete(`/api/trips/${id}`);
+      load();
+    } catch (error) {
+      setState((s) => ({ ...s, error: apiError(error) }));
+    }
+  };
+  
+  return (
+    <AdminPageLayout eyebrow="SCHEDULES" title="Trips">
+      <Notice type="success">{state.success}</Notice>
+      <Notice>{state.error}</Notice>
+      <div className="admin-two-col">
+        <form className="admin-form" onSubmit={submit}>
+          <h2>{editing ? "Edit trip" : "Schedule a trip"}</h2>
+          <label className="field">
+            <span>Route</span>
+            <select
+              required
+              value={form.route}
+              onChange={(e) => setForm({ ...form, route: e.target.value })}
+            >
+              <option value="">Select route</option>
+              {routes.map((route) => (
+                <option value={route._id} key={route._id}>
+                  {route.origin} → {route.destination}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Departure</span>
+            <input
+              type="datetime-local"
+              required
+              value={form.departureTime}
+              onChange={(e) => setForm({ ...form, departureTime: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>Arrival</span>
+            <input
+              type="datetime-local"
+              required
+              value={form.arrivalTime}
+              onChange={(e) => setForm({ ...form, arrivalTime: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>Available seats</span>
+            <input
+              type="number"
+              min="0"
+              required
+              value={form.availableSeats}
+              onChange={(e) => setForm({ ...form, availableSeats: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>Status</span>
+            <select
+              value={form.status}
+              onChange={(e) => setForm({ ...form, status: e.target.value })}
+            >
+              <option value="scheduled">scheduled</option>
+              <option value="completed">completed</option>
+              <option value="cancelled">cancelled</option>
+            </select>
+          </label>
+          <button className="button button-primary" disabled={state.saving}>
+            {state.saving ? "Saving trip..." : editing ? "Update trip" : "Create trip"}
+          </button>
+          {editing && (
+            <button
+              type="button"
+              className="button button-quiet"
+              onClick={() => {
+                setEditing(null);
+                setForm(blankTrip);
+              }}
+            >
+              Cancel edit
+            </button>
+          )}
+        </form>
+        <div className="admin-list">
+          {state.loading ? (
+            <p>Loading trips...</p>
+          ) : (
+            trips.map((trip) => (
+              <article className="admin-row" key={trip._id}>
+                <div>
+                  <strong>{trip.route?.origin} → {trip.route?.destination}</strong>
+                  <span>
+                    {date(trip.departureTime)} · {trip.availableSeats} seats · {money(trip.route?.fare)}
+                  </span>
+                </div>
+                <div className="row-actions">
+                  <StatusBadge value={trip.status} />
+                  <button onClick={() => edit(trip)}>Edit</button>
+                  <button onClick={() => remove(trip._id)}>Delete</button>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+      </div>
+    </AdminPageLayout>
+  );
+}
+
+export function AdminTickets() {
+  const [tickets, setTickets] = useState([]);
+  const [state, setState] = useState({ loading: true, error: "" });
+  
+  const load = () =>
+    api
+      .get("/api/admin/tickets")
+      .then((response) => setTickets(unwrap(response).data || []))
+      .catch((err) => setState({ loading: false, error: apiError(err) }))
+      .finally(() => setState((s) => ({ ...s, loading: false })));
+      
+  useEffect(() => {
+    load();
+  }, []);
+  
+  const update = async (id, status) => {
+    try {
+      await api.patch(`/api/admin/tickets/${id}/status`, { status });
+      load();
+    } catch (error) {
+      setState((s) => ({ ...s, error: apiError(error) }));
+    }
+  };
+  
+  return (
+    <AdminPageLayout eyebrow="BOOKING OPERATIONS" title="Issued tickets">
+      <Notice>{state.error}</Notice>
+      {state.loading ? (
+        <p>Loading tickets...</p>
+      ) : (
+        <div className="admin-list">
+          {tickets.map((ticket) => (
+            <article className="admin-row" key={ticket._id}>
+              <div>
+                <strong>{ticket.ticketReference}</strong>
+                <span>
+                  {ticket.user?.name} · {ticket.trip?.route?.origin} → {ticket.trip?.route?.destination} · {money(ticket.amount)}
+                </span>
+              </div>
+              <select
+                value={ticket.status}
+                onChange={(e) => update(ticket._id, e.target.value)}
+              >
+                <option value="active">active</option>
+                <option value="used">used</option>
+                <option value="cancelled">cancelled</option>
+              </select>
+            </article>
+          ))}
+        </div>
+      )}
+    </AdminPageLayout>
+  );
+}
