@@ -20,6 +20,7 @@ body {
   margin: 0;
   min-width: 320px;
   background: #f5f7f5;
+  overflow-x: hidden;
 }
 a {
   color: inherit;
@@ -468,6 +469,11 @@ h2 {
   background: white;
   border: 1px solid var(--line);
 }
+.ticket-card > div:first-child,
+.trip-card,
+.admin-row > div:first-child {
+  min-width: 0;
+}
 .ticket-ref {
   color: #bd5b4e;
   font: 700 0.72rem "Space Grotesk";
@@ -552,6 +558,7 @@ h2 {
 .trip-card h2 {
   margin: 30px 0;
   font-size: 1.75rem;
+  overflow-wrap: anywhere;
 }
 .trip-times,
 .detail-grid {
@@ -715,6 +722,10 @@ h2 {
   gap: 6px;
   min-width: 0;
 }
+.admin-row strong,
+.admin-row span {
+  overflow-wrap: anywhere;
+}
 .admin-row span {
   color: var(--muted);
   font-size: 0.78rem;
@@ -729,12 +740,20 @@ h2 {
   color: #bd5b4e;
 }
 @media (max-width: 800px) {
-  .nav-links {
-    gap: 11px;
-    font-size: 0.78rem;
+  .topbar {
+    height: auto;
+    min-height: 76px;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-top: 14px;
+    padding-bottom: 14px;
   }
-  .nav-links a:nth-child(n + 3) {
-    display: none;
+  .nav-links {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    font-size: 0.82rem;
   }
   .hero,
   .auth-page {
@@ -778,6 +797,15 @@ h2 {
     align-items: start;
     flex-direction: column;
   }
+  .admin-content {
+    padding-top: 38px;
+  }
+  .admin-row {
+    align-items: flex-start;
+  }
+  .row-actions {
+    flex-wrap: wrap;
+  }
 }
 @media (max-width: 480px) {
   .topbar {
@@ -787,7 +815,8 @@ h2 {
     font-size: 1.05rem;
   }
   .nav-links {
-    gap: 9px;
+    justify-content: flex-start;
+    gap: 8px 10px;
   }
   .nav-cta {
     padding: 8px 9px;
@@ -820,6 +849,16 @@ h2 {
   }
   .admin-row select {
     max-width: 100%;
+  }
+  .button,
+  .ticket-side .button {
+    max-width: 100%;
+  }
+  .trip-footer {
+    align-items: flex-start;
+  }
+  .trip-footer .button {
+    padding: 0 12px;
   }
 }
 
