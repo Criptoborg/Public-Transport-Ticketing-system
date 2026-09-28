@@ -17,37 +17,35 @@ const calculateStraightLineDistance = (originCoordinates, destinationCoordinates
   return 2 * earthRadiusKm * Math.asin(Math.sqrt(haversine));
 };
 
-const calculateRouteFare = async (originCoordinates, destinationCoordinates) => {
-  if (!process.env.OPENROUTESERVICE_API_KEY) {
-    const distanceKm = calculateStraightLineDistance(originCoordinates, destinationCoordinates);
-    return { distanceKm: Number(distanceKm.toFixed(2)), fare: calculateFare(distanceKm) };
-  }
-
-  const params = new URLSearchParams({
-    api_key: process.env.OPENROUTESERVICE_API_KEY,
-    start: `${originCoordinates.longitude},${originCoordinates.latitude}`,
-    end: `${destinationCoordinates.longitude},${destinationCoordinates.latitude}`
-  });
-  const response = await fetch(`https://api.openrouteservice.org/v2/directions/driving-car?${params}`);
-  const result = await response.json();
- if (!response.ok) {
-  console.error('OpenRouteService error:', response.status, result);
-
-  const error = new Error('Routing service could not calculate the distance');
-  error.statusCode = 502;
-  throw error;
-}
-  
-
-  const distanceMeters = result.routes?.[0]?.summary?.distance ?? result.features?.[0]?.properties?.segments?.[0]?.distance;
-  if (!Number.isFinite(distanceMeters)) {
-    const error = new Error('Routing service returned no route distance');
-    error.statusCode = 502;
-    throw error;
-  }
-
-  const distanceKm = distanceMeters / 1000;
+const calculateLocalRouteFare = (originCoordinates, destinationCoordinates) => {
+  const distanceKm = calculateStraightLineDistance(originCoordinates, destinationCoordinates);
   return { distanceKm: Number(distanceKm.toFixed(2)), fare: calculateFare(distanceKm) };
+};
+
+const calculateRouteFare = async (originCoordinates, destinationCoordinates) => {
+  if (!process.env.OPENROUTESERVICE_API_KEY) return calculateLocalRouteFare(originCoordinates, destinationCoordinates);
+
+  try {
+    const params = new URLSearchParams({
+      api_key: process.env.OPENROUTESERVICE_API_KEY,
+      start: `${originCoordinates.longitude},${originCoordinates.latitude}`,
+      end: `${destinationCoordinates.longitude},${destinationCoordinates.latitude}`
+    });
+    const response = await fetch(`https://api.openrouteservice.org/v2/directions/driving-car?${params}`, {
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!response.ok) throw new Error(`OpenRouteService returned ${response.status}`);
+
+    const result = await response.json();
+    const distanceMeters = result.routes?.[0]?.summary?.distance ?? result.features?.[0]?.properties?.segments?.[0]?.distance;
+    if (!Number.isFinite(distanceMeters)) throw new Error('OpenRouteService response did not include a route distance');
+
+    const distanceKm = distanceMeters / 1000;
+    return { distanceKm: Number(distanceKm.toFixed(2)), fare: calculateFare(distanceKm) };
+  } catch (error) {
+    console.warn(`OpenRouteService unavailable; using straight-line distance: ${error.message}`);
+    return calculateLocalRouteFare(originCoordinates, destinationCoordinates);
+  }
 };
 
 module.exports = { calculateFare, calculateRouteFare };
