@@ -310,7 +310,7 @@ Security measures implemented in the project include:
 - Passwords excluded from normal API responses
 - `.env` files excluded from Git
 - Centralized backend error handling
-- Restricted administrative operations
+- Restricted administrative operations\n- CORS restricted to the configured frontend origin and local development frontend
 
 > Never commit API keys, database credentials, JWT secrets, or `.env` files to the repository.
 
@@ -378,7 +378,7 @@ Testing includes:
 - Production deployment integration
 - Responsive frontend testing
 
-Backend API endpoints can also be tested using Postman.
+Backend API endpoints can also be tested using Postman. The backend includes automated API tests built with **Jest** and **Supertest**, covering health/404 responses, authentication validation, JWT protection, role-based authorization, and resource validation.\n\nRun the automated backend tests with:\n\n```bash\ncd backend\nnpm test\n```
 
 ---
 
