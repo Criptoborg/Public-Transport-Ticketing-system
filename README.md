@@ -241,6 +241,10 @@ The frontend will normally be available at:
 http://localhost:5173
 ```
 
+### Favicon
+
+The browser tab icon is the custom SVG at `frontend/public/favicon.svg`. Vite serves it as `/favicon.svg`, and `frontend/index.html` links to that path. To change the icon, replace the SVG asset while keeping the filename, then rebuild or restart the frontend.
+
 ---
 
 ## 🔐 Authentication & Authorization

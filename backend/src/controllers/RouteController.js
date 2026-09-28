@@ -46,7 +46,8 @@ const getRoute = async (req, res, next) => {
 const createRoute = async (req, res, next) => {
   try {
     const { origin, destination, fare, status, originCoordinates, destinationCoordinates } = req.body;
-    const calculated = await getCalculatedFare(req.body);
+    const hasManualFare = fare !== undefined && fare !== null && fare !== '';
+    const calculated = hasManualFare ? null : await getCalculatedFare(req.body);
     if (!origin || !destination) return res.status(400).json({ success: false, message: 'Origin and destination are required', data: null });
     const routeFare = fare !== undefined && Number(fare) > 0 ? Number(fare) : calculated?.fare ?? Number(process.env.BASE_FARE || 300);
     const route = await Route.create({ origin, destination, fare: routeFare, distanceKm: calculated?.distanceKm, originCoordinates, destinationCoordinates, status });
@@ -61,7 +62,8 @@ const updateRoute = async (req, res, next) => {
     if (!existingRoute) return res.status(404).json({ success: false, message: 'Route not found', data: null });
     const update = { ...req.body };
     const merged = { originCoordinates: req.body.originCoordinates ?? existingRoute.originCoordinates, destinationCoordinates: req.body.destinationCoordinates ?? existingRoute.destinationCoordinates };
-    const calculated = await getCalculatedFare(merged);
+    const hasManualFare = req.body.fare !== undefined && req.body.fare !== null && req.body.fare !== '';
+    const calculated = hasManualFare ? null : await getCalculatedFare(merged);
     if (req.body.fare !== undefined && Number(req.body.fare) > 0) {
       update.fare = Number(req.body.fare);
     } else if (calculated) {
