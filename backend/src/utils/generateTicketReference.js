@@ -1,5 +1,7 @@
+const crypto = require('crypto');
+
 const generateTicketReference = () => {
-  const randomPart = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const randomPart = crypto.randomBytes(5).toString('hex').toUpperCase();
   return `TKT-${randomPart}`;
 };
 
