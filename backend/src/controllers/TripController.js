@@ -3,6 +3,7 @@ const Trip = require('../models/Trip');
 const Route = require('../models/Route');
 const Ticket = require('../models/Ticket');
 const getPagination = require('../utils/pagination');
+const escapeRegex = require('../utils/escapeRegex');
 const cancelTrip = require('../services/cancelTrip');
 
 const tripDetails = (query = {}) => Trip.find(query).populate('route', 'origin destination fare distanceKm status').sort({ departureTime: 1 });
@@ -10,17 +11,67 @@ const tripDetails = (query = {}) => Trip.find(query).populate('route', 'origin d
 const getTrips = async (req, res, next) => {
   try {
     const filter = {};
-    if (req.query.status) filter.status = req.query.status;
+    let routeIds = null;
+    if (typeof req.query.status === 'string' && req.query.status) filter.status = req.query.status;
     if (req.query.route) {
       if (!mongoose.isValidObjectId(req.query.route)) 
         return res.status(400).json({ success: false, message: 'Invalid route ID', data: null });
-      filter.route = req.query.route;
+      routeIds = [new mongoose.Types.ObjectId(req.query.route)];
     }
+    if (typeof req.query.minSeats === 'string' && req.query.minSeats !== '') {
+      const minimumSeats = Number(req.query.minSeats);
+      if (!Number.isInteger(minimumSeats) || minimumSeats < 0) return res.status(400).json({ success: false, message: 'minSeats must be a non-negative integer', data: null });
+      filter.availableSeats = { $gte: minimumSeats };
+    }
+    if (typeof req.query.origin === 'string' && req.query.origin.trim()) {
+      const routes = await Route.find({ origin: new RegExp(escapeRegex(req.query.origin.trim()), 'i') }).distinct('_id');
+      routeIds = routeIds ? routeIds.filter((id) => routes.some((routeId) => routeId.equals(id))) : routes;
+    }
+    if (typeof req.query.destination === 'string' && req.query.destination.trim()) {
+      const routes = await Route.find({ destination: new RegExp(escapeRegex(req.query.destination.trim()), 'i') }).distinct('_id');
+      routeIds = routeIds ? routeIds.filter((id) => routes.some((routeId) => routeId.equals(id))) : routes;
+    }
+    if (routeIds) filter.route = { $in: routeIds };
+    const parseDate = (value) => {
+      const parsed = new Date(value);
+      return Number.isFinite(parsed.getTime()) ? parsed : null;
+    };
+    if (req.query.date || req.query.from || req.query.to) {
+      const departureTime = {};
+      if (req.query.date) {
+        const day = parseDate(req.query.date);
+        if (!day) return res.status(400).json({ success: false, message: 'Invalid date filter', data: null });
+        const dayStart = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate()));
+        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+        departureTime.$gte = dayStart;
+        departureTime.$lt = dayEnd;
+      } else {
+        if (req.query.from) {
+          const from = parseDate(req.query.from);
+          if (!from) return res.status(400).json({ success: false, message: 'Invalid from date', data: null });
+          departureTime.$gte = from;
+        }
+        if (req.query.to) {
+          const to = parseDate(req.query.to);
+          if (!to) return res.status(400).json({ success: false, message: 'Invalid to date', data: null });
+          if (/^\d{4}-\d{2}-\d{2}$/.test(req.query.to)) to.setUTCHours(23, 59, 59, 999);
+          departureTime.$lte = to;
+        }
+      }
+      filter.departureTime = departureTime;
+    }
+    if (req.query.sort && !['departure', 'price'].includes(req.query.sort)) return res.status(400).json({ success: false, message: 'sort must be departure or price', data: null });
     const { page, limit, skip } = getPagination(req.query);
-    const [trips, total] = await Promise.all([
-      tripDetails(filter).skip(skip).limit(limit),
-      Trip.countDocuments(filter)
+    const sort = req.query.sort === 'price' ? { 'route.fare': 1, departureTime: 1 } : { departureTime: 1 };
+    const [result] = await Trip.aggregate([
+      { $match: filter },
+      { $lookup: { from: 'routes', localField: 'route', foreignField: '_id', as: 'route' } },
+      { $unwind: '$route' },
+      { $sort: sort },
+      { $facet: { data: [{ $skip: skip }, { $limit: limit }], total: [{ $count: 'count' }] } }
     ]);
+    const trips = result?.data || [];
+    const total = result?.total?.[0]?.count || 0;
     res.json({ success: true, message: 'Trips retrieved successfully', data: trips, meta: { page, limit, total, pages: Math.ceil(total / limit) } });
   } catch (error) { next(error); }
 };

@@ -16,6 +16,8 @@ const ticketSchema = new mongoose.Schema(
     qrToken: { type: String, select: false },
     usedAt: Date,
     validatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    reminderSentAt: Date,
+    reminderClaimedAt: Date,
     purchaseDate: { type: Date, default: Date.now }
   },
   { timestamps: true }

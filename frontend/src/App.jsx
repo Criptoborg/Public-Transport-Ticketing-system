@@ -10,6 +10,7 @@ import { LoadingState } from "./components/common/PageStates";
 import Landing from "./pages/public/Landing";
 import PaymentCallback from "./pages/public/PaymentCallback";
 import TicketDetail from "./pages/passenger/TicketDetail";
+import Profile from "./pages/passenger/Profile";
 const ValidateTickets = lazy(() => import("./pages/admin/ValidateTickets"));
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
 import {
@@ -52,6 +53,8 @@ export default function App() {
               <Route element={<ProtectedRoute />}>
                 <Route path="/payment/callback" element={<PaymentCallback />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/profile" element={<Profile />} />
                 <Route path="/trips" element={<Trips />} />
                 <Route path="/trips/:id" element={<TripDetails />} />
                 <Route path="/tickets" element={<Tickets />} />

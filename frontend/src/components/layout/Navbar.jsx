@@ -30,6 +30,8 @@ export default function Navbar() {
             <NavLink to="/admin/trips">Trips</NavLink>
             <NavLink to="/admin/tickets">Tickets</NavLink>
             <NavLink to="/admin/users">Users</NavLink>
+            <NavLink to="/profile">Profile</NavLink>
+            <NavLink to="/profile">Profile</NavLink>
             <NavLink to="/admin/validate-tickets">Validate tickets</NavLink>
             <button type="button" className="text-button" onClick={exit}>
               Sign out
@@ -47,6 +49,8 @@ export default function Navbar() {
             <NavLink to="/dashboard">Dashboard</NavLink>
             <NavLink to="/trips">Find a trip</NavLink>
             <NavLink to="/tickets">My tickets</NavLink>
+            <NavLink to="/profile">Profile</NavLink>
+            <NavLink to="/profile">Profile</NavLink>
             <button type="button" className="text-button" onClick={exit}>
               Sign out
             </button>

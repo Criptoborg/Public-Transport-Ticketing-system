@@ -571,6 +571,72 @@ h2 {
 .filter-row input {
   min-width: 260px;
 }
+.trip-search-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 12px;
+  margin: -12px 0 26px;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+.trip-search-filters input,
+.trip-search-filters select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: #fbfcfb;
+  color: var(--ink);
+  padding: 10px 12px;
+}
+.profile-section {
+  margin-bottom: 24px;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+.profile-section h2 {
+  font-size: 1.25rem;
+  margin-bottom: 18px;
+}
+.profile-section .admin-form {
+  max-width: 560px;
+  padding: 0;
+  border: 0;
+}
+.trip-search-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 12px;
+  margin: -12px 0 26px;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+.trip-search-filters input,
+.trip-search-filters select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: #fbfcfb;
+  color: var(--ink);
+  padding: 10px 12px;
+}
+.profile-section {
+  margin-bottom: 24px;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+.profile-section h2 {
+  font-size: 1.25rem;
+  margin-bottom: 18px;
+}
+.profile-section .admin-form {
+  max-width: 560px;
+  padding: 0;
+  border: 0;
+}
 .trip-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -925,6 +991,14 @@ h2 {
     width: 100%;
     flex-direction: column;
   }
+  .trip-search-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 14px;
+  }
+  .trip-search-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 14px;
+  }
   .filter-row input {
     min-width: 0;
   }
@@ -987,6 +1061,12 @@ h2 {
   }
   .two-fields,
   .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .trip-search-filters {
+    grid-template-columns: 1fr;
+  }
+  .trip-search-filters {
     grid-template-columns: 1fr;
   }
   .admin-row select {

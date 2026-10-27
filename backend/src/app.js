@@ -73,10 +73,14 @@ const PORT = process.env.PORT || 5000;
 if (require.main === module) {
   connectDB().then(() => {
     require('./services/paymentService').startExpiryJob();
+    require('./services/tripReminderService').startReminderJob();
+    require('./services/tripReminderService').startReminderJob();
     const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
     process.once('SIGTERM', () => {
       server.close(async () => {
         require('./services/paymentService').stopExpiryJob();
+        require('./services/tripReminderService').stopReminderJob();
+        require('./services/tripReminderService').stopReminderJob();
         await mongoose.disconnect();
         process.exit(0);
       });

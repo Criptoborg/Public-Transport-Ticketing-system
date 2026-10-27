@@ -173,17 +173,21 @@ function ReservationCountdown({ until }) {
 
 export function Trips() {
   const [trips, setTrips] = useState([]);
-  const [filters, setFilters] = useState({ search: "", status: "scheduled" });
+  const [filters, setFilters] = useState({ origin: "", destination: "", date: "", from: "", to: "", minSeats: "", status: "scheduled", sort: "departure" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   useEffect(() => {
     setLoading(true);
+    setError("");
+    const params = Object.fromEntries(Object.entries({ page, limit: 20, ...filters }).filter(([, value]) => value !== ""));
+    if (filters.date) {
+      delete params.from;
+      delete params.to;
+    }
     api
-      .get("/api/trips", {
-        params: { page, limit: 20, ...(filters.status ? { status: filters.status } : {}) },
-      })
+      .get("/api/trips", { params })
       .then((response) => {
         const result = unwrap(response);
         setTrips(result.data || []);
@@ -191,47 +195,36 @@ export function Trips() {
       })
       .catch((err) => setError(apiError(err)))
       .finally(() => setLoading(false));
-  }, [filters.status, page]);
-  const visible = trips.filter((trip) => {
-    const value =
-      `${trip.route?.origin} ${trip.route?.destination}`.toLowerCase();
-    return value.includes(filters.search.toLowerCase());
-  });
+  }, [filters, page]);
+  const updateFilter = (key, value) => {
+    setFilters((current) => ({ ...current, [key]: value, ...(key === "date" && value ? { from: "", to: "" } : {}) }));
+    setPage(1);
+  };
   return (
     <main className="page-shell">
       <PageTitle eyebrow="PLAN A JOURNEY" title="Find your next trip">
-        <div className="filter-row">
-          <input
-            aria-label="Search trips"
-            placeholder="Search origin or destination"
-            value={filters.search}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-          />
-          <select
-            value={filters.status}
-            onChange={(e) => {
-              setFilters((current) => ({ ...current, status: e.target.value }));
-              setPage(1);
-            }}
-          >
-            <option value="scheduled">Scheduled</option>
-            <option value="">All statuses</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
       </PageTitle>
+      <div className="trip-search-filters">
+        <label className="field"><span>Origin</span><input value={filters.origin} onChange={(event) => updateFilter("origin", event.target.value)} placeholder="Any origin" /></label>
+        <label className="field"><span>Destination</span><input value={filters.destination} onChange={(event) => updateFilter("destination", event.target.value)} placeholder="Any destination" /></label>
+        <label className="field"><span>Travel day</span><input type="date" value={filters.date} onChange={(event) => updateFilter("date", event.target.value)} /></label>
+        <label className="field"><span>From</span><input type="date" value={filters.from} disabled={Boolean(filters.date)} onChange={(event) => updateFilter("from", event.target.value)} /></label>
+        <label className="field"><span>To</span><input type="date" value={filters.to} disabled={Boolean(filters.date)} onChange={(event) => updateFilter("to", event.target.value)} /></label>
+        <label className="field"><span>Minimum seats</span><input type="number" min="0" step="1" value={filters.minSeats} onChange={(event) => updateFilter("minSeats", event.target.value)} /></label>
+        <label className="field"><span>Status</span><select value={filters.status} onChange={(event) => updateFilter("status", event.target.value)}><option value="scheduled">Scheduled</option><option value="">All statuses</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></label>
+        <label className="field"><span>Sort by</span><select value={filters.sort} onChange={(event) => updateFilter("sort", event.target.value)}><option value="departure">Departure</option><option value="price">Price</option></select></label>
+      </div>
       <Notice>{error}</Notice>
       {loading ? (
             <LoadingState label="Loading trips..." />
-      ) : visible.length ? (
+      ) : trips.length ? (
         <div className="trip-grid">
-          {visible.map((trip) => (
+          {trips.map((trip) => (
             <TripCard trip={trip} key={trip._id} />
           ))}
         </div>
       ) : (
-        <EmptyState title="No trips match this search">Try a different origin, destination, or status.</EmptyState>
+        <EmptyState title="No trips match these filters">Try a different origin, date, minimum seats, or sort order.</EmptyState>
       )}
       {!loading && <Pagination page={page} pages={pages} onChange={setPage} />}
     </main>

@@ -99,4 +99,43 @@ const resetPassword = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-module.exports = { register, login, forgotPassword, resetPassword };
+const getMe = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id).select('_id name email role createdAt').lean();
+    if (!user) return res.status(404).json({ success: false, message: 'User not found', data: null });
+    res.json({ success: true, message: 'Profile retrieved successfully', data: safeUser(user) });
+  } catch (error) { next(error); }
+};
+
+const updateMe = async (req, res, next) => {
+  try {
+    const { name } = req.body;
+    if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 100) {
+      return res.status(400).json({ success: false, message: 'Name must be between 2 and 100 characters', data: null });
+    }
+    const user = await User.findByIdAndUpdate(req.user.id, { $set: { name: name.trim() } }, { new: true, runValidators: true }).select('_id name email role createdAt');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found', data: null });
+    res.json({ success: true, message: 'Profile updated successfully', data: safeUser(user) });
+  } catch (error) { next(error); }
+};
+
+const changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (typeof currentPassword !== 'string' || typeof newPassword !== 'string' || !currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Current password and new password are required', data: null });
+    }
+    if (!isValidPassword(newPassword)) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters and include a letter and a number', data: null });
+    }
+    const user = await User.findById(req.user.id).select('+password');
+    if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+      return res.status(400).json({ success: false, message: 'Current password is incorrect', data: null });
+    }
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+    res.json({ success: true, message: 'Password changed successfully. Other active sessions remain signed in.', data: null });
+  } catch (error) { next(error); }
+};
+
+module.exports = { register, login, forgotPassword, resetPassword, getMe, updateMe, changePassword };

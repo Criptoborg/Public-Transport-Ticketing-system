@@ -5,7 +5,8 @@ const { MongoMemoryReplSet } = require('mongodb-memory-server');
 
 jest.mock('../src/services/emailService', () => ({
   sendBookingConfirmation: jest.fn().mockResolvedValue(undefined),
-  sendRefundNotification: jest.fn().mockResolvedValue(undefined)
+  sendRefundNotification: jest.fn().mockResolvedValue(undefined),
+  sendTripReminder: jest.fn().mockResolvedValue(undefined)
 }));
 
 const app = require('../src/app');
@@ -18,6 +19,8 @@ const PaymentAttempt = require('../src/models/PaymentAttempt');
 const TicketController = require('../src/controllers/TicketController');
 const PaymentService = require('../src/services/paymentService');
 const QrTicketService = require('../src/services/qrTicketService');
+const TripReminderService = require('../src/services/tripReminderService');
+const EmailService = require('../src/services/emailService');
 
 jest.setTimeout(180000);
 
@@ -266,6 +269,17 @@ describe('Paystack ticket lifecycle', () => {
 
     expect(results).toEqual(['already_used', 'valid']);
     expect(await Ticket.countDocuments({ _id: ticket._id, status: 'used' })).toBe(1);
+  });
+
+  test('trip reminder is claimed and emailed once per active ticket', async () => {
+    const ticket = await Ticket.create({ user: passenger._id, trip: trip._id, bookingId: 'reminder-booking', ticketReference: 'TKT-REMINDER001', amount: route.fare, status: 'active', paymentStatus: 'paid' });
+    const departureTime = new Date(Date.now() + 2.5 * 60 * 60 * 1000);
+    await Trip.updateOne({ _id: trip._id }, { departureTime, arrivalTime: new Date(departureTime.getTime() + 60 * 60 * 1000) });
+
+    expect(await TripReminderService.runReminderJob()).toBe(1);
+    expect(await TripReminderService.runReminderJob()).toBe(0);
+    expect(EmailService.sendTripReminder).toHaveBeenCalledTimes(1);
+    expect((await Ticket.findById(ticket._id)).reminderSentAt).toBeTruthy();
   });
 
   test('passenger cannot use the staff-only validation endpoint', async () => {

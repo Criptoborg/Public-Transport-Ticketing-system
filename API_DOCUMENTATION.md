@@ -236,6 +236,20 @@ Resets a password using the token received through the reset link.
 
 - `400` — missing token/password, password too short, or invalid/expired token.
 
+## Current User Profile
+
+### GET `/api/auth/me`
+
+Requires a valid JWT. Returns the current user's safe profile fields.
+
+### PATCH `/api/auth/me`
+
+Requires a valid JWT. Body: `{ "name": "Ada Lovelace" }`. Updates only the current user's display name.
+
+### POST `/api/auth/change-password`
+
+Requires a valid JWT. Body: `{ "currentPassword": "...", "newPassword": "..." }`. The current password must be correct; the new password must be at least 8 characters and contain a letter and a number. Existing sessions are not revoked.
+
 ## Payments
 
 Paystack hosted checkout is used for payment. Card details are entered only on Paystack. The backend secret is configured with `PAYSTACK_SECRET_KEY` and is never returned to the frontend.
@@ -445,6 +459,10 @@ Returns trips ordered by departure time.
 
 - `status` — `scheduled`, `completed`, or `cancelled`.
 - `route` — MongoDB route ID.
+- `origin`, `destination` — case-insensitive route endpoint search.
+- `date` — one UTC calendar day; alternatively use `from` and/or `to` for an inclusive date range.
+- `minSeats` — minimum available seats.
+- `sort` — `departure` (default) or `price`.
 
 **Example**
 

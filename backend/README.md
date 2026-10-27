@@ -90,6 +90,9 @@ Successful responses use `{ "success": true, "message": "...", "data": ... }`. E
 | POST | `/api/auth/login` | No | Log in. Body: `{ "email", "password" }`; returns a one-day JWT and safe user data. |
 | POST | `/api/auth/forgot-password` | No | Request a reset link. Body: `{ "email" }`; always returns a generic success message. |
 | POST | `/api/auth/reset-password` | No | Set a new password. Body: `{ "token", "newPassword" }`; token expires after 15 minutes. |
+| GET | `/api/auth/me` | User | Get the signed-in user's safe profile. |
+| PATCH | `/api/auth/me` | User | Update name. Body: `{ "name" }`. |
+| POST | `/api/auth/change-password` | User | Change password. Body: `{ "currentPassword", "newPassword" }`; the new password follows the 8-character letter/number rule. Existing sessions remain valid. |
 
 Example success:
 
@@ -146,13 +149,17 @@ Routes with the existing explicit `fare` shape remain supported. When coordinate
 
 | Method | URL | Auth/role | Purpose |
 |---|---|---|---|
-| GET | `/api/trips` | Any logged-in user | List trips with populated route details. Optional filters: `status`, `route`. |
+| GET | `/api/trips` | Any logged-in user | List trips with populated route details. Filters: `status`, `route`, `origin`, `destination`, `date` (UTC day) or `from`/`to`, `minSeats`, and `sort=departure|price`. |
 | GET | `/api/trips/:id` | Any logged-in user | Get one trip with route details. |
 | POST | `/api/trips` | Admin | Create trip. Body: `{ "route", "departureTime", "arrivalTime", "availableSeats", "status?" }`. |
 | PUT | `/api/trips/:id` | Admin | Update trip. Arrival must be after departure and seats cannot be negative. |
 | DELETE | `/api/trips/:id` | Admin | Delete a trip. |
 
 Dates must be valid date strings, for example `2026-10-01T08:00:00.000Z`.
+
+## Trip reminders
+
+A background job checks once per minute for active paid tickets with departures about three hours away and sends a Routely reminder through Resend. A per-ticket claim prevents concurrent instances from sending duplicate reminders; unsuccessful email attempts are released for retry. Optional email verification at registration is out of scope.
 
 ## Ticket endpoints
 
@@ -212,4 +219,4 @@ backend/
 └── README.md
 ```
 
-The `services/` folder is intentionally empty for future business logic. Assumptions: route/trip reads require a logged-in user, ticket booking is allowed for any authenticated role because the MVP has one booking flow, and deleting a route or trip does not cascade-delete existing tickets.
+Assumptions: route/trip reads require a logged-in user; booking requires authentication; and deleting a route or trip with ticket references is refused.

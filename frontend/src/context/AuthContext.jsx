@@ -27,6 +27,11 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const updateUser = (updatedUser) => {
+    localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  };
+
   useEffect(() => {
     const handleUnauthorized = () => {
       const intendedPath = `${location.pathname}${location.search}${location.hash}`;
@@ -39,7 +44,7 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('routely:unauthorized', handleUnauthorized);
   }, [location, navigate]);
 
-  const value = useMemo(() => ({ token, user, login, logout, isAuthenticated: Boolean(token && user) }), [token, user]);
+  const value = useMemo(() => ({ token, user, login, logout, updateUser, isAuthenticated: Boolean(token && user) }), [token, user]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

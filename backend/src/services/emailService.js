@@ -46,4 +46,15 @@ const sendRefundNotification = (user, ticket) => sendEmail({
   text: `Hello ${user.name},\n\nA refund has been initiated for ticket ${ticket.ticketReference}, amount ₦${Number(ticket.amount).toLocaleString()}. Your bank or card provider may take additional time to post it.`
 });
 
-module.exports = { sendWelcomeEmail, sendPasswordResetEmail, sendBookingConfirmation, sendRefundNotification };
+const sendTripReminder = (user, ticket) => {
+  const origin = ticket.trip?.route?.origin || 'your origin';
+  const destination = ticket.trip?.route?.destination || 'your destination';
+  const departure = ticket.trip?.departureTime ? new Date(ticket.trip.departureTime).toLocaleString() : 'as scheduled';
+  return sendEmail({
+    to: user.email,
+    subject: 'Your Routely trip is coming up',
+    text: `Hello ${user.name},\n\nA reminder that your trip from ${origin} to ${destination} departs at ${departure}.\nTicket reference: ${ticket.ticketReference}\n\nWe look forward to seeing you on board.`
+  });
+};
+
+module.exports = { sendWelcomeEmail, sendPasswordResetEmail, sendBookingConfirmation, sendRefundNotification, sendTripReminder };

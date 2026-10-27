@@ -79,3 +79,19 @@ Provide Phases 5–9 and the exact Phase 9 item 6 privacy rule. The launch-video
 ## Next
 
 Provide Phases 6–9, including the exact Phase 9 item 6 privacy rule. Launch-video workflow remains unspecified.
+
+## Phase 6: Passenger Features and Emails
+
+**Status:** Implemented on `feature/hardening-and-payments`; ready to commit.
+
+**Changes:** Added authenticated profile read/name update/password change endpoints; server-side trip origin/destination, UTC day or date range, minimum seats, and departure/price sorting; profile page; and a non-overlapping reminder job that claims active paid tickets and emails about three hours before departure, once per ticket. Reminder claim timestamps are released after send failure for retry.
+
+**Files touched:** Auth/trip controllers and routes, ticket model/email/reminder service/app lifecycle, profile/trip frontend/navigation/styles, `.env.example`, tests, backend/API docs, and this report.
+
+**Verification:** Full backend suite passed: 48 tests across 9 suites, including profile/password, server-side trip filters and reminder idempotency. Frontend production build passed without warnings. Email verification was skipped as explicitly out of scope.
+
+**Decisions:** Password changes verify the current password and do not revoke other sessions. Trip date-only filtering uses UTC calendar-day boundaries. Reminder sending uses an atomic per-ticket claim to avoid duplicate sends across instances.
+
+## Next
+
+Assess Phase 7 seat selection against existing reservation/expiry/refund seat accounting. Continue to Phase 8 only after Phase 7 is implemented safely or explicitly skipped with rationale.
