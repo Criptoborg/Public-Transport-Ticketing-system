@@ -15,14 +15,14 @@ const sendEmail = async ({ to, subject, text }) => {
 
 const sendWelcomeEmail = (user) => sendEmail({
   to: user.email,
-  subject: 'Welcome to Public Transport Ticketing System',
-  text: `Hello ${user.name},\n\nYour account has been created successfully.\n\nYou can now log in, browse available trips and book your ticket.\n\nThank you for using Public Transport Ticketing System.`
+  subject: 'Welcome to Routely',
+  text: `Hello ${user.name},\n\nYour Routely account has been created successfully.\n\nYou can now log in, browse available trips and book your ticket.\n\nThank you for travelling with Routely.`
 });
 
 const sendPasswordResetEmail = (user, resetUrl) => sendEmail({
   to: user.email,
-  subject: 'Reset your Public Transport Ticketing System password',
-  text: `Hello ${user.name},\n\nUse this link to reset your password: ${resetUrl}\n\nThis link expires in 15 minutes. If you did not request a password reset, you can ignore this email.`
+  subject: 'Reset your Routely password',
+  text: `Hello ${user.name},\n\nUse this link to reset your Routely password: ${resetUrl}\n\nThis link expires in 15 minutes. If you did not request a password reset, you can ignore this email.`
 });
 
 module.exports = { sendWelcomeEmail, sendPasswordResetEmail };

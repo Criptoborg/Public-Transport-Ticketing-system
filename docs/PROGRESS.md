@@ -15,3 +15,19 @@
 ## Next
 
 Provide Phases 2–9, including the exact Phase 9 item 6 privacy requirement, to continue without inventing scope. The requested launch video is not produced yet; the remaining workflow and video acceptance requirements were not included.
+
+## Phase 2: Frontend Cleanup and Fixes
+
+**Status:** Implemented on `feature/hardening-and-payments`; ready to commit.
+
+**Changes:** Removed the commented duplicate app/admin implementations and retained `Sidebar.jsx`, which is actively used by admin pages. Switched trip details to `useParams`, replaced stale state updates, and changed 401 handling to clear auth through context and restore the intended path after login. Added a global error boundary, explicit 404, shared loading/empty states, cold-start notice, API pagination UI, Routely emails/README/page titles/meta description, password-policy hints, accessible labels/focus states/status contrast, and explicit button types.
+
+**Files touched:** Root/backend READMEs, backend email service, frontend HTML, app shell, auth context/API service, common components, admin/passenger/auth pages, landing page, navbar, and styles, plus this report.
+
+**Verification:** `npm run build` in `frontend` passed with no warnings. Browser smoke checks confirmed the landing page and unknown-route 404, dynamic page titles, and no React Router future-flag warnings after opting into announced future behaviors. Editor diagnostics and `git diff --check` were clean.
+
+**Remaining:** Live workflows against the deployed API were not exercised because no authenticated test account or production credentials were provided. The frontend dev server is available at `http://127.0.0.1:5173/`.
+
+## Next
+
+Continue with Phase 3 from the supplied phase brief. Phases 3–9, the exact Phase 9 item 6 privacy requirement, and the launch-video workflow are still needed before implementing later scope.

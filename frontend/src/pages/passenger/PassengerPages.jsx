@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import api, { apiError, unwrap } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import Notice from "../../components/common/Notice";
 import StatusBadge from "../../components/common/StatusBadge";
+import { EmptyState, LoadingState } from "../../components/common/PageStates";
 
 const money = (value) => `₦${Number(value || 0).toLocaleString()}`;
 const date = (value) =>
@@ -11,14 +12,6 @@ const date = (value) =>
     dateStyle: "medium",
     timeStyle: "short",
   });
-function Loading({ children = "Loading..." }) {
-  return (
-    <div className="loading">
-      <span className="spinner" />
-      {children}
-    </div>
-  );
-}
 function PageTitle({ eyebrow, title, children }) {
   return (
     <div className="page-title">
@@ -34,11 +27,11 @@ function Pagination({ page, pages, onChange }) {
   if (pages <= 1) return null;
   return (
     <nav className="pagination" aria-label="Pagination">
-      <button className="button button-quiet" disabled={page <= 1} onClick={() => onChange(page - 1)}>
+      <button type="button" className="button button-quiet" disabled={page <= 1} onClick={() => onChange(page - 1)}>
         Previous
       </button>
       <span>Page {page} of {pages}</span>
-      <button className="button button-quiet" disabled={page >= pages} onClick={() => onChange(page + 1)}>
+      <button type="button" className="button button-quiet" disabled={page >= pages} onClick={() => onChange(page + 1)}>
         Next
       </button>
     </nav>
@@ -49,14 +42,23 @@ export function Dashboard() {
   const { user } = useAuth();
   const [trips, setTrips] = useState([]);
   const [tickets, setTickets] = useState([]);
+  const [ticketCount, setTicketCount] = useState(0);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
-    Promise.all([api.get("/api/trips"), api.get("/api/tickets/my-tickets")])
+    Promise.all([
+      api.get("/api/trips", { params: { status: "scheduled", limit: 1 } }),
+      api.get("/api/tickets/my-tickets", { params: { limit: 3 } }),
+    ])
       .then(([tripResponse, ticketResponse]) => {
-        setTrips(unwrap(tripResponse).data || []);
-        setTickets(unwrap(ticketResponse).data || []);
+        const tripResult = unwrap(tripResponse);
+        const ticketResult = unwrap(ticketResponse);
+        setTrips([{ count: tripResult.meta?.total || 0 }]);
+        setTickets(ticketResult.data || []);
+        setTicketCount(ticketResult.meta?.total || 0);
       })
-      .catch((err) => setError(apiError(err)));
+      .catch((err) => setError(apiError(err)))
+      .finally(() => setLoading(false));
   }, []);
   return (
     <main className="page-shell">
@@ -83,14 +85,14 @@ export function Dashboard() {
         </div>
         <div className="metric-panel">
           <span className="metric-label">Scheduled trips</span>
-          <strong>
-            {trips.filter((trip) => trip.status === "scheduled").length}
+          <strong aria-live="polite">
+            {loading ? "..." : trips[0]?.count || 0}
           </strong>
           <span>available in the network</span>
         </div>
         <div className="metric-panel accent">
           <span className="metric-label">Tickets held</span>
-          <strong>{tickets.length}</strong>
+          <strong aria-live="polite">{loading ? "..." : ticketCount}</strong>
           <span>in your travel history</span>
         </div>
       </section>
@@ -102,16 +104,16 @@ export function Dashboard() {
           </div>
           <Link to="/tickets">View all</Link>
         </div>
-        {tickets.length ? (
+        {loading ? (
+          <LoadingState label="Loading your tickets..." />
+        ) : tickets.length ? (
           <div className="ticket-list">
             {tickets.slice(0, 3).map((ticket) => (
               <TicketCard ticket={ticket} key={ticket._id} />
             ))}
           </div>
         ) : (
-          <div className="empty-state">
-            Your booked tickets will appear here.
-          </div>
+          <EmptyState title="No tickets yet">Your booked tickets will appear here.</EmptyState>
         )}
       </section>
     </main>
@@ -138,6 +140,7 @@ function TicketCard({ ticket, onCancel }) {
         <StatusBadge value={ticket.status} />
         {ticket.status === "active" && onCancel && (
           <button
+            type="button"
             className="button button-quiet"
             onClick={() => onCancel(ticket._id)}
           >
@@ -187,7 +190,10 @@ export function Trips() {
           />
           <select
             value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            onChange={(e) => {
+              setFilters((current) => ({ ...current, status: e.target.value }));
+              setPage(1);
+            }}
           >
             <option value="scheduled">Scheduled</option>
             <option value="">All statuses</option>
@@ -198,7 +204,7 @@ export function Trips() {
       </PageTitle>
       <Notice>{error}</Notice>
       {loading ? (
-        <Loading>Loading trips...</Loading>
+            <LoadingState label="Loading trips..." />
       ) : visible.length ? (
         <div className="trip-grid">
           {visible.map((trip) => (
@@ -206,7 +212,7 @@ export function Trips() {
           ))}
         </div>
       ) : (
-        <div className="empty-state">No trips match this search.</div>
+        <EmptyState title="No trips match this search">Try a different origin, destination, or status.</EmptyState>
       )}
       {!loading && <Pagination page={page} pages={pages} onChange={setPage} />}
     </main>
@@ -240,6 +246,7 @@ function TripCard({ trip }) {
           <strong>{money(route.fare)}</strong>
         </div>
         <button
+          type="button"
           className="button button-primary"
           disabled={trip.status !== "scheduled" || trip.availableSeats < 1}
           onClick={() => navigate(`/trips/${trip._id}`)}
@@ -252,7 +259,7 @@ function TripCard({ trip }) {
 }
 
 export function TripDetails() {
-  const id = window.location.pathname.split("/").pop();
+  const { id } = useParams();
   const navigate = useNavigate();
   const [trip, setTrip] = useState(null);
   const [state, setState] = useState({
@@ -265,25 +272,25 @@ export function TripDetails() {
     api
       .get(`/api/trips/${id}`)
       .then((response) => setTrip(unwrap(response).data))
-      .catch((err) => setState({ ...state, error: apiError(err) }))
+      .catch((err) => setState((current) => ({ ...current, error: apiError(err) })))
       .finally(() => setState((current) => ({ ...current, loading: false })));
   }, [id]);
   const book = async () => {
-    setState({ ...state, booking: true, error: "", success: "" });
+    setState((current) => ({ ...current, booking: true, error: "", success: "" }));
     try {
       const data = unwrap(
         await api.post("/api/tickets/createticket", { trip: id }),
       );
-      setState({ ...state, booking: false, success: data.message });
+      setState((current) => ({ ...current, booking: false, success: data.message }));
       setTimeout(() => navigate("/tickets"), 1000);
     } catch (error) {
-      setState({ ...state, booking: false, error: apiError(error) });
+      setState((current) => ({ ...current, booking: false, error: apiError(error) }));
     }
   };
   if (state.loading)
     return (
       <main className="page-shell">
-        <Loading>Loading trip...</Loading>
+            <LoadingState label="Loading trip..." />
       </main>
     );
   if (!trip)
@@ -329,6 +336,7 @@ export function TripDetails() {
           </div>
         </div>
         <button
+          type="button"
           className="button button-primary wide"
           disabled={
             state.booking ||
@@ -380,7 +388,7 @@ export function Tickets() {
       </PageTitle>
       <Notice>{state.error}</Notice>
       {state.loading ? (
-        <Loading>Loading tickets...</Loading>
+        <LoadingState label="Loading tickets..." />
       ) : tickets.length ? (
         <div className="ticket-list">
           {tickets.map((ticket) => (
@@ -388,13 +396,9 @@ export function Tickets() {
           ))}
         </div>
       ) : (
-        <div className="empty-state">
-          <h2>No tickets yet</h2>
-          <p>Choose a trip and your first ticket will be saved here.</p>
-          <Link className="button button-primary" to="/trips">
-            Find a trip
-          </Link>
-        </div>
+        <EmptyState title="No tickets yet" action={<Link className="button button-primary" to="/trips">Find a trip</Link>}>
+          Choose a trip and your first ticket will be saved here.
+        </EmptyState>
       )}
       {!state.loading && <Pagination page={page} pages={pages} onChange={setPage} />}
     </main>

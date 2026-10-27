@@ -1,4 +1,4 @@
-# Public Transport Ticketing API
+# Routely API
 
 A simple Node.js, Express, MongoDB and Mongoose backend for the Public Transport Ticketing System MVP. Ticket creation represents a booking only; there is no real payment gateway.
 

@@ -1,6 +1,6 @@
-# 🚌 Public Transport Ticketing System
+# Routely | Public Transport Ticketing
 
-A full-stack web application designed to simplify public transport trip discovery, ticket booking, and transport management.
+A full-stack web application designed to simplify public transport trip discovery, ticket booking, and transport management under the Routely brand.
 
 The system allows passengers to register, find available trips, book tickets, and manage their bookings. Administrators can manage routes, trips, fares, and issued tickets.
 

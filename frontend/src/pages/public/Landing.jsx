@@ -20,7 +20,7 @@ export default function Landing() {
             </Link>
           </div>
         </div>
-        <div className="route-art" aria-label="Illustration of a route map">
+        <div className="route-art" role="img" aria-label="Illustrated route map linking Lagos, Ikeja, and Ibadan">
           <span className="route-line" />
           <span className="route-stop stop-one" />
           <span className="route-stop stop-two" />

@@ -44,7 +44,9 @@ export function Login() {
       navigate(
         data.data.user.role === "admin"
           ? "/admin"
-          : location.state?.from?.pathname || "/dashboard",
+          : location.state?.from
+            ? `${location.state.from.pathname}${location.state.from.search || ""}${location.state.from.hash || ""}`
+            : "/dashboard",
         { replace: true },
       );
     } catch (error) {
@@ -69,7 +71,7 @@ export function Login() {
           value={form.password}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
         />
-        <button className="button button-primary" disabled={state.loading}>
+        <button type="submit" className="button button-primary" disabled={state.loading}>
           {state.loading ? "Logging in..." : "Log in"}
         </button>
       </form>
@@ -94,10 +96,10 @@ export function Register() {
   const submit = async (event) => {
     event.preventDefault();
     if (form.password.length < 8 || !/[A-Za-z]/.test(form.password) || !/\d/.test(form.password))
-      return setState({
-        ...state,
+      return setState((current) => ({
+        ...current,
         error: "Password must be at least 8 characters and include a letter and a number.",
-      });
+      }));
     setState({ loading: true, error: "", success: "" });
     try {
       const data = unwrap(await api.post("/api/auth/register", form));
@@ -138,7 +140,8 @@ export function Register() {
           value={form.password}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
         />
-        <button className="button button-primary" disabled={state.loading}>
+        <p className="field-hint">Use at least 8 characters, including a letter and a number.</p>
+        <button type="submit" className="button button-primary" disabled={state.loading}>
           {state.loading ? "Creating account..." : "Create account"}
         </button>
       </form>
@@ -180,7 +183,7 @@ export function ForgotPassword() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <button className="button button-primary" disabled={state.loading}>
+        <button type="submit" className="button button-primary" disabled={state.loading}>
           {state.loading ? "Sending..." : "Send reset link"}
         </button>
       </form>
@@ -203,12 +206,12 @@ export function ResetPassword() {
   const submit = async (event) => {
     event.preventDefault();
     if (form.newPassword.length < 8 || !/[A-Za-z]/.test(form.newPassword) || !/\d/.test(form.newPassword))
-      return setState({
-        ...state,
+      return setState((current) => ({
+        ...current,
         error: "Password must be at least 8 characters and include a letter and a number.",
-      });
+      }));
     if (form.newPassword !== form.confirm)
-      return setState({ ...state, error: "Passwords do not match." });
+      return setState((current) => ({ ...current, error: "Passwords do not match." }));
     setState({ loading: true, message: "", error: "" });
     try {
       const data = unwrap(
@@ -237,6 +240,7 @@ export function ResetPassword() {
           value={form.newPassword}
           onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
         />
+        <p className="field-hint">Use at least 8 characters, including a letter and a number.</p>
         <Field
           label="Confirm password"
           type="password"
@@ -246,7 +250,7 @@ export function ResetPassword() {
           value={form.confirm}
           onChange={(e) => setForm({ ...form, confirm: e.target.value })}
         />
-        <button className="button button-primary" disabled={state.loading}>
+        <button type="submit" className="button button-primary" disabled={state.loading}>
           {state.loading ? "Resetting password..." : "Reset password"}
         </button>
       </form>
