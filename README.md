@@ -195,7 +195,12 @@ CANCEL_CUTOFF_HOURS=2
 PAYSTACK_SECRET_KEY=sk_test_replace_with_paystack_test_secret
 PAYSTACK_CALLBACK_URL=http://localhost:5173/payment/callback
 PENDING_TICKET_MINUTES=15
+QR_SIGNING_SECRET=replace_with_a_separate_long_random_secret
+BOARDING_WINDOW_BEFORE_MINUTES=60
+BOARDING_WINDOW_AFTER_MINUTES=30
 ```
+
+`QR_SIGNING_SECRET` must be a separate server-only secret, not the JWT auth secret. Boarding validation accepts admin and trusted conductor accounts only. The default boarding window is 60 minutes before through 30 minutes after scheduled departure.
 
 `PAYSTACK_SECRET_KEY` is a backend-only secret and must never be added to frontend variables. `PAYSTACK_CALLBACK_URL` is the hosted checkout return URL; `PENDING_TICKET_MINUTES` defaults to 15. Before enabling payments for existing data, run `node scripts/migrate-existing-tickets.js` from `backend/` after backing up the database.
 

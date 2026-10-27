@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Route, Routes, Link, useLocation } from "react-router-dom";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
-import { ProtectedRoute, AdminRoute } from "./components/common/ProtectedRoute";
+import { ProtectedRoute, AdminRoute, BoardingStaffRoute } from "./components/common/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import Notice from "./components/common/Notice";
+import { LoadingState } from "./components/common/PageStates";
 import Landing from "./pages/public/Landing";
 import PaymentCallback from "./pages/public/PaymentCallback";
+import TicketDetail from "./pages/passenger/TicketDetail";
+const ValidateTickets = lazy(() => import("./pages/admin/ValidateTickets"));
 import {
   Login,
   Register,
@@ -51,6 +54,10 @@ export default function App() {
                 <Route path="/trips" element={<Trips />} />
                 <Route path="/trips/:id" element={<TripDetails />} />
                 <Route path="/tickets" element={<Tickets />} />
+                <Route path="/tickets/:id" element={<TicketDetail />} />
+                <Route element={<BoardingStaffRoute />}>
+                  <Route path="/admin/validate-tickets" element={<Suspense fallback={<div className="page-shell"><LoadingState label="Loading scanner..." /></div>}><ValidateTickets /></Suspense>} />
+                </Route>
                 
                 <Route element={<AdminRoute />}>
                   <Route path="/admin" element={<AdminDashboard />} />

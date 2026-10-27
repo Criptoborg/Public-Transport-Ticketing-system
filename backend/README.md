@@ -22,6 +22,9 @@ CANCEL_CUTOFF_HOURS=2
 PAYSTACK_SECRET_KEY=sk_test_replace_with_paystack_test_secret
 PAYSTACK_CALLBACK_URL=http://localhost:5173/payment/callback
 PENDING_TICKET_MINUTES=15
+QR_SIGNING_SECRET=replace_with_a_separate_long_random_secret
+BOARDING_WINDOW_BEFORE_MINUTES=60
+BOARDING_WINDOW_AFTER_MINUTES=30
 ```
 
 `CANCEL_CUTOFF_HOURS` sets the minimum time before departure when a passenger may cancel; it defaults to 2 hours. `PAYSTACK_SECRET_KEY` is a backend-only Paystack test/live key and must never be exposed in frontend configuration. `PAYSTACK_CALLBACK_URL` defaults to `${FRONTEND_URL}/payment/callback`. `PENDING_TICKET_MINUTES` defaults to 15. Passwords must contain at least 8 characters, including a letter and a number.
@@ -39,6 +42,12 @@ Bookings reserve seats and create pending tickets. Passengers are redirected to 
 Before enabling payments on an existing database, run `node scripts/migrate-existing-tickets.js` from this directory. The script marks existing tickets paid and assigns each a legacy booking ID. Back up the database before migration.
 
 Eligible cancellations initiate partial refunds per ticket for multi-ticket bookings. Provider acceptance marks tickets `refunded`; failures are saved as `refund_failed` for admin follow-up. Bank/card posting times depend on Paystack and the provider.
+
+## QR tickets and boarding validation
+
+After payment, each ticket receives a JWT signed with `QR_SIGNING_SECRET`; its payload contains only the ticket ID and ticket reference. Keep this secret separate from `JWT_SECRET`. The frontend renders the signed token as a QR; card/list responses do not include it. Admins and users with the `conductor` role can call `POST /api/tickets/validate` with `{ "code": "SIGNED_QR_TOKEN_OR_REFERENCE" }`. Boarding is limited to the configured window before and after departure (defaults 60 and 30 minutes), and an active paid ticket is atomically marked used once. Create conductor accounts only through trusted database administration, never public registration.
+
+Owners and admins can view `/api/tickets/:id`; that response includes the signed QR for paid active tickets and a `cancellationAllowed` flag calculated from the server clock. List responses never include the QR token.
 
 ## Authentication
 

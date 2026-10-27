@@ -19,3 +19,12 @@ export function AdminRoute() {
     <Navigate to="/dashboard" replace />
   );
 }
+
+export function BoardingStaffRoute() {
+  const { user } = useAuth();
+  return ['admin', 'conductor'].includes(user?.role) ? (
+    <Outlet />
+  ) : (
+    <Navigate to="/dashboard" replace />
+  );
+}

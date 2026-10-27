@@ -47,3 +47,19 @@ Continue with Phase 3 from the supplied phase brief. Phases 3–9, the exact Pha
 ## Next
 
 Provide Phases 4–9, including the exact Phase 9 item 6 privacy rule, to continue. The launch-video workflow remains unspecified and is not produced yet.
+
+## Phase 4: QR Tickets and Boarding Validation
+
+**Status:** Implemented on `feature/hardening-and-payments`; ready to commit.
+
+**Changes:** Added QR tokens signed with a dedicated `QR_SIGNING_SECRET` and claims limited to ticket ID/reference. QR tokens are stored when paid tickets activate and are returned only from authorized ticket detail reads. Added atomic admin/conductor ticket validation with distinct outcomes, configured boarding windows, first-name/route-only disclosure, `usedAt` and `validatedBy`. Added conductor role support without public registration, owner ticket detail with QR/payment/status/cancel eligibility, print styling, linked ticket cards, and a lazy-loaded camera/reference scanner with VALID/INVALID results and last-10 history.
+
+**Files touched:** QR/user/ticket models and service, payment/ticket controllers and routes, environment examples, backend/root/API docs, payment/boarding tests, frontend route guards/app/nav/pages/styles, and this report.
+
+**Verification:** All backend tests passed: 39 tests across 7 suites, including signed QR claims, paid activation, first/second scan results, concurrent scan exactly-once behavior, unpaid/cancelled/expired/wrong-trip/not-found outcomes, and role access. Frontend production build passed without warnings; the camera scanner is emitted as a separate lazy-loaded chunk. Backend JavaScript syntax checks passed. Production dependency audit reported 0 vulnerabilities.
+
+**Remaining:** Camera permission/device behavior was not manually exercised in a browser. Create conductor users only through trusted database administration. Set `QR_SIGNING_SECRET` and boarding-window variables in deployment; do not reuse `JWT_SECRET`. No new QR secret was available or needed during tests.
+
+## Next
+
+Provide Phases 5–9 and the exact Phase 9 item 6 privacy rule. The launch-video workflow is still unspecified.

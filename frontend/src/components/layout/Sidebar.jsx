@@ -26,6 +26,9 @@ export default function Sidebar() {
         <NavLink to="/admin/tickets" className={linkClass}>
           Issued Tickets
         </NavLink>
+        <NavLink to="/admin/validate-tickets" className={linkClass}>
+          Validate tickets
+        </NavLink>
         
         {/* You can easily add more links here later without breaking the layout */}
         {/* <NavLink to="/admin/users" className={linkClass}>Users</NavLink> */}

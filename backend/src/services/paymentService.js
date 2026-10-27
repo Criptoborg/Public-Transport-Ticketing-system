@@ -6,6 +6,7 @@ const Trip = require('../models/Trip');
 const PaymentAttempt = require('../models/PaymentAttempt');
 const { sendBookingConfirmation, sendRefundNotification } = require('./emailService');
 const { getRefundAmountKobo } = require('./refundPolicy');
+const { signTicketQr } = require('./qrTicketService');
 
 const PAYSTACK_URL = 'https://api.paystack.co';
 
@@ -149,6 +150,14 @@ const markAttemptPaid = async (reference, providerData) => {
         { session }
       );
       if (result.modifiedCount === attempt.ticketIds.length) {
+        for (const ticketId of attempt.ticketIds) {
+          const ticket = await Ticket.findById(ticketId).select('_id ticketReference').session(session);
+          await Ticket.updateOne(
+            { _id: ticketId, status: 'active', paymentStatus: 'paid' },
+            { $set: { qrToken: signTicketQr(ticket) } },
+            { session }
+          );
+        }
         transitioned = true;
         return;
       }

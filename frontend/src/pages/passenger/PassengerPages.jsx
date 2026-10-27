@@ -125,10 +125,11 @@ function TicketCard({ ticket, onCancel, onPay, paying = false }) {
   return (
     <article className="ticket-card">
       <div>
-        <span className="ticket-ref">{ticket.ticketReference}</span>
-        <h3>
-          {route?.origin} <span>→</span> {route?.destination}
-        </h3>
+        <Link className="ticket-ref" to={`/tickets/${ticket._id}`}>{ticket.ticketReference}</Link>
+        <Link className="ticket-card-route" to={`/tickets/${ticket._id}`}>
+          <h3>{route?.origin} <span>→</span> {route?.destination}</h3>
+        </Link>
+        <Link className="ticket-detail-link" to={`/tickets/${ticket._id}`}>View ticket</Link>
         <p>
           {ticket.trip
             ? date(ticket.trip.departureTime)

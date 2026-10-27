@@ -258,6 +258,20 @@ Public Paystack webhook. Configure this URL in Paystack: `https://YOUR_API_HOST/
 
 Pending tickets expire after `PENDING_TICKET_MINUTES` (default 15); held seats are released once. A paid cancellation starts a refund. `refund_failed` tickets need admin follow-up.
 
+## Ticket QR and boarding validation
+
+### GET `/api/tickets/:id`
+
+Returns ticket details for the owner or admin. Paid active tickets include a signed QR token with only the ticket ID and reference; the QR signature uses the separate `QR_SIGNING_SECRET`.
+
+### POST `/api/tickets/validate`
+
+Requires an admin or conductor account. Body: `{ "code": "SIGNED_QR_TOKEN_OR_TICKET_REFERENCE" }`. A paid active ticket inside the configured boarding window is atomically changed to `used`. Results include `valid`, `already_used`, `cancelled`, `expired`, `unpaid`, `wrong_trip`, or `not_found`; passenger data is limited to first name and route.
+
+### GET `/api/tickets/:id`
+
+Requires the ticket owner or an admin. Returns detailed ticket, route, departure/arrival, and server-calculated `cancellationAllowed`. The signed QR token is returned only for the owner/admin detail response and only for paid, active tickets.
+
 ---
 
 # Routes

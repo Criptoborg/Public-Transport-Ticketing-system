@@ -17,6 +17,7 @@ const User = require('../src/models/User');
 const PaymentAttempt = require('../src/models/PaymentAttempt');
 const TicketController = require('../src/controllers/TicketController');
 const PaymentService = require('../src/services/paymentService');
+const QrTicketService = require('../src/services/qrTicketService');
 
 jest.setTimeout(180000);
 
@@ -40,6 +41,10 @@ const book = (quantity = 1) => makeRequest(TicketController.createTicket, {
   body: { trip: trip._id.toString(), quantity },
   user: { id: passenger._id.toString(), role: 'passenger' }
 });
+const validate = (code, role = 'admin') => makeRequest(TicketController.validateTicket, {
+  body: { code },
+  user: { id: passenger._id.toString(), role }
+});
 
 beforeAll(async () => {
   mongo = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
@@ -55,6 +60,7 @@ beforeEach(async () => {
   await Promise.all([Ticket.deleteMany({}), Trip.deleteMany({}), Route.deleteMany({}), User.deleteMany({}), PaymentAttempt.deleteMany({})]);
   process.env.PAYSTACK_SECRET_KEY = 'sk_test_unit_test_secret';
   process.env.JWT_SECRET = 'test-only-secret';
+  process.env.QR_SIGNING_SECRET = 'separate-qr-test-secret';
   process.env.PAYSTACK_CALLBACK_URL = 'http://localhost:5173/payment/callback';
   process.env.PENDING_TICKET_MINUTES = '15';
   passenger = await User.create({ name: 'Test Passenger', email: 'passenger@example.com', password: 'hashed-password' });
@@ -151,6 +157,8 @@ describe('Paystack ticket lifecycle', () => {
     expect(await PaymentService.processWebhookEvent(event)).toBe(true);
     expect(await Ticket.countDocuments({ bookingId: booking.body.data.bookingId, status: 'active', paymentStatus: 'paid' })).toBe(2);
     expect(await PaymentAttempt.countDocuments({ reference: init.reference, status: 'paid' })).toBe(1);
+    const paidTickets = await Ticket.find({ bookingId: booking.body.data.bookingId }).select('+qrToken');
+    expect(paidTickets.every((ticket) => QrTicketService.verifyTicketQr(ticket.qrToken)?.ticketId === ticket._id.toString())).toBe(true);
   });
 
   test('reservation expiry releases seats exactly once', async () => {
@@ -183,6 +191,91 @@ describe('Paystack ticket lifecycle', () => {
     expect(ticket.status).toBe('expired');
     expect(ticket.paymentStatus).toBe('refunded');
     expect(provider.post).toHaveBeenCalledTimes(2);
+  });
+
+  test('signed QR contains only ticket id and reference and paid ticket validates exactly once', async () => {
+    await Trip.updateOne({ _id: trip._id }, {
+      departureTime: new Date(Date.now() + 10 * 60 * 1000),
+      arrivalTime: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    const ticket = await Ticket.create({
+      user: passenger._id,
+      trip: trip._id,
+      bookingId: 'qr-booking',
+      ticketReference: 'TKT-QRVALID23',
+      amount: route.fare,
+      status: 'active',
+      paymentStatus: 'paid'
+    });
+    ticket.qrToken = QrTicketService.signTicketQr(ticket);
+    await ticket.save();
+    const payload = QrTicketService.verifyTicketQr(ticket.qrToken);
+
+    expect(payload).toMatchObject({ ticketId: ticket._id.toString(), reference: ticket.ticketReference });
+    expect(payload).not.toHaveProperty('email');
+    expect(payload).not.toHaveProperty('name');
+
+    const first = await validate(ticket.qrToken);
+    const second = await validate(ticket.qrToken);
+    expect(first.body.data.result).toBe('valid');
+    expect(second.body.data.result).toBe('already_used');
+    expect(second.body.data.usedAt).toBeTruthy();
+    expect(second.body.data).not.toHaveProperty('email');
+    expect(second.body.data).not.toHaveProperty('user');
+    expect((await Ticket.findById(ticket._id)).status).toBe('used');
+  });
+
+  test('typed reference reports unpaid and does not mark the reservation used', async () => {
+    const booking = await book();
+    const reference = booking.body.data.tickets[0].ticketReference;
+    const result = await validate(reference, 'conductor');
+
+    expect(result.body.data.result).toBe('unpaid');
+    expect((await Ticket.findOne({ ticketReference: reference })).status).toBe('pending');
+  });
+
+  test('validator distinguishes cancelled, expired, wrong-trip and unknown tickets', async () => {
+    const makeTicket = (reference, status, paymentStatus = 'paid') => Ticket.create({
+      user: passenger._id,
+      trip: trip._id,
+      bookingId: `scan-${reference}`,
+      ticketReference: reference,
+      amount: route.fare,
+      status,
+      paymentStatus
+    });
+    const cancelled = await makeTicket('TKT-CANCEL0001', 'cancelled');
+    const expired = await makeTicket('TKT-EXPIRED0001', 'expired', 'unpaid');
+    await Trip.updateOne({ _id: trip._id }, { departureTime: new Date(Date.now() + 5 * 60 * 60 * 1000) });
+
+    expect((await validate(cancelled.ticketReference)).body.data.result).toBe('cancelled');
+    expect((await validate(expired.ticketReference)).body.data.result).toBe('expired');
+    const wrongTripTicket = await makeTicket('TKT-WINDOW00001', 'active');
+    expect((await validate(wrongTripTicket.ticketReference)).body.data.result).toBe('wrong_trip');
+    expect((await validate('TKT-DOESNOTEXIST')).body.data.result).toBe('not_found');
+  });
+
+  test('concurrent scans mark a paid active ticket used only once', async () => {
+    await Trip.updateOne({ _id: trip._id }, {
+      departureTime: new Date(Date.now() + 10 * 60 * 1000),
+      arrivalTime: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    const ticket = await Ticket.create({ user: passenger._id, trip: trip._id, bookingId: 'concurrent-scan', ticketReference: 'TKT-CONCURSCAN1', amount: route.fare, status: 'active', paymentStatus: 'paid' });
+    const responses = await Promise.all([validate(ticket.ticketReference), validate(ticket.ticketReference)]);
+    const results = responses.map((response) => response.body.data.result).sort();
+
+    expect(results).toEqual(['already_used', 'valid']);
+    expect(await Ticket.countDocuments({ _id: ticket._id, status: 'used' })).toBe(1);
+  });
+
+  test('passenger cannot use the staff-only validation endpoint', async () => {
+    const response = await request(app)
+      .post('/api/tickets/validate')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ code: 'TKT-UNKNOWN' });
+
+    expect(response.status).toBe(403);
+    expect(response.body.success).toBe(false);
   });
 
   test('refund succeeds to refunded and provider failure is recorded', async () => {

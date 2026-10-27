@@ -13,6 +13,9 @@ const ticketSchema = new mongoose.Schema(
     paidAt: Date,
     reservedUntil: Date,
     refundedAt: Date,
+    qrToken: { type: String, select: false },
+    usedAt: Date,
+    validatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     purchaseDate: { type: Date, default: Date.now }
   },
   { timestamps: true }
