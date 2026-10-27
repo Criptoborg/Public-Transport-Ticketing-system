@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main, feature/hardening-and-payments]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Test backend
+        working-directory: backend
+        run: npm install && npm test
+      - name: Test and build frontend
+        working-directory: frontend
+        run: npm install && npm test && npm run build

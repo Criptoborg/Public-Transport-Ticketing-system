@@ -1,6 +1,6 @@
-# 🚌 Public Transport Ticketing System
+# Routely | Public Transport Ticketing
 
-A full-stack web application designed to simplify public transport trip discovery, ticket booking, and transport management.
+A full-stack web application designed to simplify public transport trip discovery, ticket booking, and transport management under the Routely brand.
 
 The system allows passengers to register, find available trips, book tickets, and manage their bookings. Administrators can manage routes, trips, fares, and issued tickets.
 
@@ -191,13 +191,29 @@ FRONTEND_URL=http://localhost:5173
 OPENROUTESERVICE_API_KEY=your_openrouteservice_api_key
 BASE_FARE=300
 FARE_PER_KM=70
+CANCEL_CUTOFF_HOURS=2
+PAYSTACK_SECRET_KEY=sk_test_replace_with_paystack_test_secret
+PAYSTACK_CALLBACK_URL=http://localhost:5173/payment/callback
+PENDING_TICKET_MINUTES=15
+QR_SIGNING_SECRET=replace_with_a_separate_long_random_secret
+BOARDING_WINDOW_BEFORE_MINUTES=60
+BOARDING_WINDOW_AFTER_MINUTES=30
+SEED_ADMIN_NAME=Routely Admin
+SEED_ADMIN_EMAIL=admin@example.com
+SEED_ADMIN_PASSWORD=ReplaceWithLongMixedPassword1!
 ```
+
+`QR_SIGNING_SECRET` must be a separate server-only secret, not the JWT auth secret. Boarding validation accepts admin and trusted conductor accounts only. The default boarding window is 60 minutes before through 30 minutes after scheduled departure.
+
+`PAYSTACK_SECRET_KEY` is a backend-only secret and must never be added to frontend variables. `PAYSTACK_CALLBACK_URL` is the hosted checkout return URL; `PENDING_TICKET_MINUTES` defaults to 15. Before enabling payments for existing data, run `node scripts/migrate-existing-tickets.js` from `backend/` after backing up the database.
 
 Start the backend development server:
 
 ```bash
 npm run dev
 ```
+
+Provision an administrator using `npm run seed:admin` after setting `SEED_ADMIN_NAME`, `SEED_ADMIN_EMAIL`, and a strong `SEED_ADMIN_PASSWORD` in `backend/.env`. The script never prints the password, refuses to promote an existing non-admin user, and leaves an existing admin account unchanged. Seed the Lagos–Ibadan demo route and trip with `npm run seed:demo`; production is refused unless `-- --force` is explicitly supplied. Stable demo keys make reruns leave existing records unchanged.
 
 The backend runs locally on:
 
@@ -256,6 +272,8 @@ Passwords are hashed before being stored in the database.
 Protected backend endpoints require a valid JWT, while role-based authorization separates passenger functionality from administrative functionality.
 
 Public registration creates passenger accounts. Administrative functionality is restricted to authorized admin users.
+
+Registration requires acceptance of the [Terms of Service](/terms) and [Privacy Policy](/privacy). The public [Refund Policy](/refund-policy) reads the active passenger cancellation cutoff and refund calculation through `GET /api/legal/config`. These are engineering drafts, not legal advice; a qualified Nigerian lawyer must review them before launch. The privacy notice treats the Nigeria Data Protection Act 2023 as the likely governing data-protection law, subject to owner/counsel confirmation. Signed-in users can download their data or request account deletion from Profile. Account deletion anonymises account identity, processes refunds for upcoming paid tickets, and retains pseudonymised ticket/payment records pending owner-approved accounting retention.
 
 ---
 
@@ -379,6 +397,8 @@ Testing includes:
 - Responsive frontend testing
 
 Backend API endpoints can also be tested using Postman. The backend includes automated API tests built with **Jest** and **Supertest**, covering health/404 responses, authentication validation, JWT protection, role-based authorization, and resource validation.\n\nRun the automated backend tests with:\n\n```bash\ncd backend\nnpm test\n```
+
+Run the backend suite with `npm test` from `backend/`. Run frontend component tests with `npm test` from `frontend/`, and create a production bundle with `npm run build`. GitHub Actions runs backend tests and frontend tests/builds on Node.js 20 and 22.
 
 ---
 

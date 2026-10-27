@@ -55,6 +55,8 @@ Errors generally follow:
 }
 ```
 
+Paginated list responses keep the result array in `data` and add a sibling `meta` object: `{ "page", "limit", "total", "pages" }`. Supported list endpoints accept `page` (default 1) and `limit` (default 20, maximum 100).
+
 ---
 
 ## Health Check
@@ -80,6 +82,12 @@ Checks whether the API is running.
 
 Base path: `/api/auth`
 
+## Public Legal Configuration
+
+### GET `/api/legal/config`
+
+No authentication required. Returns `legalVersion`, `effectiveDate`, the configured passenger cancellation cutoff (`CANCEL_CUTOFF_HOURS`, default 2), pending reservation duration (`PENDING_TICKET_MINUTES`, default 15), boarding window (`BOARDING_WINDOW_BEFORE_MINUTES`/`BOARDING_WINDOW_AFTER_MINUTES`, defaults 60/30), and the current refund amount formula generated alongside the refund function. Legal pages use this endpoint so policy values track API behavior.
+
 ## Register Passenger
 
 ### POST `/api/auth/register`
@@ -94,15 +102,17 @@ Creates a new passenger account. New users receive the `passenger` role by defau
 {
   "name": "John Doe",
   "email": "john@example.com",
-  "password": "password123"
+  "password": "password123",
+  "termsAccepted": true
 }
 ```
 
 **Validation**
 
-- `name`, `email`, and `password` are required.
+- `name`, `email`, `password`, and `termsAccepted: true` are required.
 - Email must be valid.
-- Password must contain at least 6 characters.
+- Password must contain at least 8 characters, including a letter and a number.
+- The accepted legal version and timestamp are stored on the user record.
 - Email must not already be registered.
 
 **Success:** `201 Created`
@@ -233,6 +243,78 @@ Resets a password using the token received through the reset link.
 **Common errors**
 
 - `400` — missing token/password, password too short, or invalid/expired token.
+
+## Current User Profile
+
+### GET `/api/auth/me`
+
+Requires a valid JWT. Returns the current user's safe profile fields.
+
+### PATCH `/api/auth/me`
+
+Requires a valid JWT. Body: `{ "name": "Ada Lovelace" }`. Updates only the current user's display name.
+
+### POST `/api/auth/change-password`
+
+Requires a valid JWT. Body: `{ "currentPassword": "...", "newPassword": "..." }`. The current password must be correct; the new password must be at least 8 characters and contain a letter and a number. Existing sessions are not revoked.
+
+### POST `/api/auth/me/accept-terms`
+
+Requires a valid JWT and `{ "termsAccepted": true }`. Records the current `LEGAL_VERSION` and acceptance timestamp.
+
+### GET `/api/auth/me/export`
+
+Requires a valid JWT. Downloads a JSON envelope containing only the caller's profile, tickets, and payment references/statuses.
+
+### DELETE `/api/auth/me`
+
+Requires a valid JWT and `{ "currentPassword": "...", "confirmation": "DELETE" }`. Refuses deletion of the last admin. Upcoming paid tickets are cancelled and refunds requested first; failed refunds remain recorded for admin follow-up. A confirmation email is sent before the account identity is anonymised. The account credentials/reset fields are removed, the name/email are replaced with non-identifying values, and the auth version is incremented so existing tokens are revoked. Ticket/payment records remain pseudonymised for accounting/refund follow-up; no automatic retention purge is currently configured.
+
+## Payments
+
+Paystack hosted checkout is used for payment. Card details are entered only on Paystack. The backend secret is configured with `PAYSTACK_SECRET_KEY` and is never returned to the frontend.
+
+### POST `/api/tickets/createticket`
+
+Reserves seats and creates pending ticket records. Body: `{ "trip": "TRIP_ID", "quantity": 1 }`; quantity is optional and must be 1–5. The response data includes `bookingId` and the created `tickets` array. The booking must be paid before `reservedUntil`.
+
+### POST `/api/payments/initialize`
+
+Requires authentication. Body: `{ "ticketId": "TICKET_ID" }` or `{ "bookingId": "BOOKING_ID" }`. The server calculates the NGN amount from the stored trip fare and returns `{ "authorizationUrl", "reference" }` for redirect to Paystack-hosted checkout.
+
+### GET `/api/payments/verify/:reference`
+
+Requires authentication and verifies the transaction with Paystack. Only a successful NGN payment matching the expected kobo amount activates the booking. Repeated verification is idempotent.
+
+### POST `/api/payments/webhook`
+
+Public Paystack webhook. Configure this URL in Paystack: `https://YOUR_API_HOST/api/payments/webhook`. Requests are authenticated with `x-paystack-signature` HMAC-SHA512 over the raw JSON body. Invalid signatures receive 401.
+
+Pending tickets expire after `PENDING_TICKET_MINUTES` (default 15); held seats are released once. A paid cancellation starts a refund. `refund_failed` tickets need admin follow-up.
+
+## Ticket QR and boarding validation
+
+### GET `/api/tickets/:id`
+
+Returns ticket details for the owner or admin. Paid active tickets include a signed QR token with only the ticket ID and reference; the QR signature uses the separate `QR_SIGNING_SECRET`.
+
+### POST `/api/tickets/validate`
+
+Requires an admin or conductor account. Body: `{ "code": "SIGNED_QR_TOKEN_OR_TICKET_REFERENCE" }`. A paid active ticket inside the configured boarding window is atomically changed to `used`. Results include `valid`, `already_used`, `cancelled`, `expired`, `unpaid`, `wrong_trip`, or `not_found`; passenger data is limited to first name and route.
+
+## Admin reporting and user access
+
+- `GET /api/admin/stats?days=30` — MongoDB aggregate dashboard metrics; days is limited to 90.
+- `GET /api/admin/tickets` — paginated ticket list; accepts status, paymentStatus, route, startDate, endDate and search filters.
+- `GET /api/admin/tickets/export.csv` — exports all matching filtered tickets as CSV.
+- `GET /api/admin/users?page=1&limit=20&search=...` — paginated user list.
+- `PATCH /api/admin/users/:id/role` with `{ "role": "passenger|conductor|admin" }` — changes role while preserving at least one administrator and disallowing self-demotion.
+
+`GET /api/admin/stats?days=30` returns `totalRevenue`, `ticketsSold`, `ticketsByStatus`, `topRoutes`, and `bookingsPerDay`. Days are limited to 90. Admin ticket filters are shared by the paginated JSON endpoint and CSV export.
+
+### GET `/api/tickets/:id`
+
+Requires the ticket owner or an admin. Returns detailed ticket, route, departure/arrival, and server-calculated `cancellationAllowed`. The signed QR token is returned only for the owner/admin detail response and only for paid, active tickets.
 
 ---
 
@@ -397,6 +479,12 @@ Returns trips ordered by departure time.
 
 - `status` — `scheduled`, `completed`, or `cancelled`.
 - `route` — MongoDB route ID.
+- `origin`, `destination` — case-insensitive route endpoint search.
+- `date` — one UTC calendar day; alternatively use `from` and/or `to` for an inclusive date range.
+- `minSeats` — minimum available seats.
+- `sort` — `departure` (default) or `price`.
+
+If the trip has an optional seat layout, the response also includes `seatMap: { rows, columns, occupiedSeats }`. Booking such a trip requires a `seats` array with exactly one unique valid seat number per requested quantity; occupied seats return a conflict and are not reserved twice.
 
 **Example**
 
@@ -427,7 +515,7 @@ Returns one trip with populated route information.
 
 ### POST `/api/trips`
 
-Creates a new trip.
+Creates a new trip. Optional `seatLayout: { "rows": 5, "columns": 8 }` enables assigned seats and requires `availableSeats` to equal the layout capacity.
 
 **Authentication:** Bearer token + Admin role
 
@@ -439,6 +527,7 @@ Creates a new trip.
   "departureTime": "2026-10-01T08:00:00.000Z",
   "arrivalTime": "2026-10-01T09:30:00.000Z",
   "availableSeats": 30,
+  "seatLayout": { "rows": 5, "columns": 6 },
   "status": "scheduled"
 }
 ```
@@ -459,7 +548,7 @@ Creates a new trip.
 
 ### PUT `/api/trips/:id`
 
-Updates a trip.
+Updates a trip. A seat layout cannot be resized to exclude or displace existing seat claims.
 
 **Authentication:** Bearer token + Admin role
 

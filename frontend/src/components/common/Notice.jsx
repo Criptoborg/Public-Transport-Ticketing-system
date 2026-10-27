@@ -4,6 +4,7 @@ export default function Notice({ type = "error", children }) {
     <div
       className={`notice notice-${type}`}
       role={type === "error" ? "alert" : "status"}
+      aria-live={type === "error" ? "assertive" : "polite"}
     >
       {children}
     </div>

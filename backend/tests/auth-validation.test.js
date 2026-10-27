@@ -21,13 +21,22 @@ describe('Authentication validation', () => {
     expect(response.body.message).toBe('Please provide a valid email address');
   });
 
-  test('registration rejects a password shorter than six characters', async () => {
+  test('registration rejects passwords without the required length and composition', async () => {
     const response = await request(app)
       .post('/api/auth/register')
       .send({ name: 'Test User', email: 'test@example.com', password: '12345' });
 
     expect(response.statusCode).toBe(400);
-    expect(response.body.message).toBe('Password must be at least 6 characters long');
+    expect(response.body.message).toBe('Password must be at least 8 characters and include a letter and a number');
+  });
+
+  test('registration rejects non-string email values', async () => {
+    const response = await request(app)
+      .post('/api/auth/register')
+      .send({ name: 'Test User', email: { value: 'test@example.com' }, password: 'Password123' });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body.success).toBe(false);
   });
 
   test('login rejects missing credentials before database access', async () => {

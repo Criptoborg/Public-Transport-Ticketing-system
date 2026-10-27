@@ -1,7 +1,11 @@
 const crypto = require('crypto');
 
+const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+
 const generateTicketReference = () => {
-  const randomPart = crypto.randomBytes(5).toString('hex').toUpperCase();
+  const bytes = crypto.randomBytes(10);
+  let randomPart = '';
+  for (const byte of bytes) randomPart += alphabet[byte % alphabet.length];
   return `TKT-${randomPart}`;
 };
 

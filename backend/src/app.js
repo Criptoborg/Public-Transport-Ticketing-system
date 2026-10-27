@@ -2,63 +2,77 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
+const mongoose = require('mongoose');
+const { rateLimit } = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
+const { getPublicLegalConfig } = require('./services/legalConfig');
 
 const app = express();
+app.set('trust proxy', 1);
+app.use(helmet());
 
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  'http://localhost:5173',
-  'http://127.0.0.1:5173'
-].filter(Boolean);
+const allowedOrigins = (process.env.FRONTEND_URL || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.push('http://localhost:5173', 'http://127.0.0.1:5173');
+}
 
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 200,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, message: 'Too many requests, please try again later.', data: null }
-});
-
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, message: 'Too many authentication attempts, please try again later.', data: null }
-});
-
-app.use(helmet({
-  crossOriginResourcePolicy: false,
-  contentSecurityPolicy: false
-}));
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Origin not allowed by CORS'));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: (origin, callback) => callback(null, !origin || allowedOrigins.includes(origin)),
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
-app.use('/api/payments/webhook', express.raw({ type: 'application/json', limit: '1mb' }));
-app.use(express.json({ limit: '1mb' }));
+
+app.post('/api/payments/webhook', express.raw({ type: 'application/json', limit: '32kb' }), require('./controllers/PaymentController').webhook);
+app.post('/api/payments/legacy/webhook', express.raw({ type: 'application/json', limit: '32kb' }), require('./controllers/LegacyPaymentController').webhook);
+app.use(express.urlencoded({ extended: true, limit: '32kb' }));
+app.use(express.json({ limit: '32kb' }));
 app.use(mongoSanitize());
-app.use(apiLimiter);
+
+app.use('/api', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({ success: false, message: 'Too many requests', data: null })
+}));
+
+for (const path of ['login', 'register', 'forgot-password', 'reset-password']) {
+  app.use(`/api/auth/${path}`, rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => res.status(429).json({ success: false, message: 'Too many requests', data: null })
+  }));
+}
 
 app.get('/', (req, res) => {
-  res.json({ success: true, message: 'Public Transport Ticketing API is running' });
+  res.json({ success: true, message: 'Public Transport Ticketing API is running', data: null });
 });
 
-app.use('/api/auth', authLimiter, require('./routes/AuthRoutes'));
-app.use('/api/payments', require('./routes/PaymentRoutes'));
+app.get('/health', (req, res) => {
+  const readyState = mongoose.connection.readyState;
+  res.status(readyState === 1 ? 200 : 503).json({
+    success: readyState === 1,
+    message: readyState === 1 ? 'Service is healthy' : 'Database is unavailable',
+    data: { database: readyState === 1 ? 'connected' : 'disconnected' }
+  });
+});
+
+app.get('/api/legal/config', (req, res) => {
+  res.json({ success: true, message: 'Legal configuration retrieved successfully', data: getPublicLegalConfig() });
+});
+
+app.use('/api/auth', require('./routes/AuthRoutes'));
 app.use('/api/routes', require('./routes/RouteRoutes'));
 app.use('/api/trips', require('./routes/TripRoutes'));
 app.use('/api/tickets', require('./routes/TicketRoutes'));
+app.use('/api/payments', require('./routes/PaymentRoutes'));
 app.use('/api/admin', require('./routes/AdminRoutes'));
 
 app.use((req, res) => {
@@ -70,7 +84,17 @@ const PORT = process.env.PORT || 5000;
 
 if (require.main === module) {
   connectDB().then(() => {
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    require('./services/paymentService').startExpiryJob();
+    require('./services/tripReminderService').startReminderJob();
+    const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    process.once('SIGTERM', () => {
+      server.close(async () => {
+        require('./services/paymentService').stopExpiryJob();
+        require('./services/tripReminderService').stopReminderJob();
+        await mongoose.disconnect();
+        process.exit(0);
+      });
+    });
   });
 }
 

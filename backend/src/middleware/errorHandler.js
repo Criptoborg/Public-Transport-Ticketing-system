@@ -1,5 +1,9 @@
 const errorHandler = (error, req, res, next) => {
-  console.error(error.message);
+  if (process.env.NODE_ENV === 'development') console.error(error.stack || error.message);
+
+  if (error.type === 'entity.too.large') {
+    return res.status(413).json({ success: false, message: 'Request body is too large', data: null });
+  }
 
   if (error.name === 'ValidationError') {
     const message = Object.values(error.errors).map((item) => item.message).join(', ');

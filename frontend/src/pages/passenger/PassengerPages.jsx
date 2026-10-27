@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import api, { apiError, unwrap } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import Notice from "../../components/common/Notice";
 import StatusBadge from "../../components/common/StatusBadge";
+import { EmptyState, LoadingState } from "../../components/common/PageStates";
 
 const money = (value) => `₦${Number(value || 0).toLocaleString()}`;
 const date = (value) =>
@@ -11,14 +12,6 @@ const date = (value) =>
     dateStyle: "medium",
     timeStyle: "short",
   });
-function Loading({ children = "Loading..." }) {
-  return (
-    <div className="loading">
-      <span className="spinner" />
-      {children}
-    </div>
-  );
-}
 function PageTitle({ eyebrow, title, children }) {
   return (
     <div className="page-title">
@@ -30,19 +23,42 @@ function PageTitle({ eyebrow, title, children }) {
     </div>
   );
 }
+function Pagination({ page, pages, onChange }) {
+  if (pages <= 1) return null;
+  return (
+    <nav className="pagination" aria-label="Pagination">
+      <button type="button" className="button button-quiet" disabled={page <= 1} onClick={() => onChange(page - 1)}>
+        Previous
+      </button>
+      <span>Page {page} of {pages}</span>
+      <button type="button" className="button button-quiet" disabled={page >= pages} onClick={() => onChange(page + 1)}>
+        Next
+      </button>
+    </nav>
+  );
+}
 
 export function Dashboard() {
   const { user } = useAuth();
   const [trips, setTrips] = useState([]);
   const [tickets, setTickets] = useState([]);
+  const [ticketCount, setTicketCount] = useState(0);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
-    Promise.all([api.get("/api/trips"), api.get("/api/tickets/my-tickets")])
+    Promise.all([
+      api.get("/api/trips", { params: { status: "scheduled", limit: 1 } }),
+      api.get("/api/tickets/my-tickets", { params: { limit: 3 } }),
+    ])
       .then(([tripResponse, ticketResponse]) => {
-        setTrips(unwrap(tripResponse).data || []);
-        setTickets(unwrap(ticketResponse).data || []);
+        const tripResult = unwrap(tripResponse);
+        const ticketResult = unwrap(ticketResponse);
+        setTrips([{ count: tripResult.meta?.total || 0 }]);
+        setTickets(ticketResult.data || []);
+        setTicketCount(ticketResult.meta?.total || 0);
       })
-      .catch((err) => setError(apiError(err)));
+      .catch((err) => setError(apiError(err)))
+      .finally(() => setLoading(false));
   }, []);
   return (
     <main className="page-shell">
@@ -69,14 +85,14 @@ export function Dashboard() {
         </div>
         <div className="metric-panel">
           <span className="metric-label">Scheduled trips</span>
-          <strong>
-            {trips.filter((trip) => trip.status === "scheduled").length}
+          <strong aria-live="polite">
+            {loading ? "..." : trips[0]?.count || 0}
           </strong>
           <span>available in the network</span>
         </div>
         <div className="metric-panel accent">
           <span className="metric-label">Tickets held</span>
-          <strong>{tickets.length}</strong>
+          <strong aria-live="polite">{loading ? "..." : ticketCount}</strong>
           <span>in your travel history</span>
         </div>
       </section>
@@ -88,31 +104,32 @@ export function Dashboard() {
           </div>
           <Link to="/tickets">View all</Link>
         </div>
-        {tickets.length ? (
+        {loading ? (
+          <LoadingState label="Loading your tickets..." />
+        ) : tickets.length ? (
           <div className="ticket-list">
             {tickets.slice(0, 3).map((ticket) => (
               <TicketCard ticket={ticket} key={ticket._id} />
             ))}
           </div>
         ) : (
-          <div className="empty-state">
-            Your booked tickets will appear here.
-          </div>
+          <EmptyState title="No tickets yet">Your booked tickets will appear here.</EmptyState>
         )}
       </section>
     </main>
   );
 }
 
-function TicketCard({ ticket, onCancel }) {
+function TicketCard({ ticket, onCancel, onPay, paying = false }) {
   const route = ticket.trip?.route;
   return (
     <article className="ticket-card">
       <div>
-        <span className="ticket-ref">{ticket.ticketReference}</span>
-        <h3>
-          {route?.origin} <span>→</span> {route?.destination}
-        </h3>
+        <Link className="ticket-ref" to={`/tickets/${ticket._id}`}>{ticket.ticketReference}</Link>
+        <Link className="ticket-card-route" to={`/tickets/${ticket._id}`}>
+          <h3>{route?.origin} <span>→</span> {route?.destination}</h3>
+        </Link>
+        <Link className="ticket-detail-link" to={`/tickets/${ticket._id}`}>View ticket</Link>
         <p>
           {ticket.trip
             ? date(ticket.trip.departureTime)
@@ -122,8 +139,16 @@ function TicketCard({ ticket, onCancel }) {
       <div className="ticket-side">
         <strong>{money(ticket.amount)}</strong>
         <StatusBadge value={ticket.status} />
-        {ticket.status === "active" && onCancel && (
+        {ticket.paymentStatus && <span className="payment-status">Payment: {ticket.paymentStatus.replaceAll("_", " ")}</span>}
+        {ticket.status === "pending" && <ReservationCountdown until={ticket.reservedUntil} />}
+        {ticket.status === "pending" && onPay && (
+          <button type="button" className="button button-primary" disabled={paying} onClick={() => onPay(ticket)}>
+            {paying ? "Opening checkout..." : "Pay now"}
+          </button>
+        )}
+        {ticket.status === 'active' && ticket.paymentStatus === 'paid' && onCancel && (
           <button
+            type="button"
             className="button button-quiet"
             onClick={() => onCancel(ticket._id)}
           >
@@ -135,59 +160,73 @@ function TicketCard({ ticket, onCancel }) {
   );
 }
 
+function ReservationCountdown({ until }) {
+  const [remaining, setRemaining] = useState(() => Math.max(0, new Date(until).getTime() - Date.now()));
+  useEffect(() => {
+    const timer = window.setInterval(() => setRemaining(Math.max(0, new Date(until).getTime() - Date.now())), 1000);
+    return () => window.clearInterval(timer);
+  }, [until]);
+  const minutes = Math.floor(remaining / 60000);
+  const seconds = Math.floor((remaining % 60000) / 1000).toString().padStart(2, "0");
+  return <span className="reservation-countdown" role="timer">{remaining ? `Reserved for ${minutes}:${seconds}` : "Reservation expired"}</span>;
+}
+
 export function Trips() {
   const [trips, setTrips] = useState([]);
-  const [filters, setFilters] = useState({ search: "", status: "scheduled" });
+  const [filters, setFilters] = useState({ origin: "", destination: "", date: "", from: "", to: "", minSeats: "", status: "scheduled", sort: "departure" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
   useEffect(() => {
     setLoading(true);
+    setError("");
+    const params = Object.fromEntries(Object.entries({ page, limit: 20, ...filters }).filter(([, value]) => value !== ""));
+    if (filters.date) {
+      delete params.from;
+      delete params.to;
+    }
     api
-      .get("/api/trips", {
-        params: filters.status ? { status: filters.status } : {},
+      .get("/api/trips", { params })
+      .then((response) => {
+        const result = unwrap(response);
+        setTrips(result.data || []);
+        setPages(result.meta?.pages || 1);
       })
-      .then((response) => setTrips(unwrap(response).data || []))
       .catch((err) => setError(apiError(err)))
       .finally(() => setLoading(false));
-  }, [filters.status]);
-  const visible = trips.filter((trip) => {
-    const value =
-      `${trip.route?.origin} ${trip.route?.destination}`.toLowerCase();
-    return value.includes(filters.search.toLowerCase());
-  });
+  }, [filters, page]);
+  const updateFilter = (key, value) => {
+    setFilters((current) => ({ ...current, [key]: value, ...(key === "date" && value ? { from: "", to: "" } : {}) }));
+    setPage(1);
+  };
   return (
     <main className="page-shell">
       <PageTitle eyebrow="PLAN A JOURNEY" title="Find your next trip">
-        <div className="filter-row">
-          <input
-            aria-label="Search trips"
-            placeholder="Search origin or destination"
-            value={filters.search}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-          />
-          <select
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          >
-            <option value="scheduled">Scheduled</option>
-            <option value="">All statuses</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
       </PageTitle>
+      <div className="trip-search-filters">
+        <label className="field"><span>Origin</span><input value={filters.origin} onChange={(event) => updateFilter("origin", event.target.value)} placeholder="Any origin" /></label>
+        <label className="field"><span>Destination</span><input value={filters.destination} onChange={(event) => updateFilter("destination", event.target.value)} placeholder="Any destination" /></label>
+        <label className="field"><span>Travel day</span><input type="date" value={filters.date} onChange={(event) => updateFilter("date", event.target.value)} /></label>
+        <label className="field"><span>From</span><input type="date" value={filters.from} disabled={Boolean(filters.date)} onChange={(event) => updateFilter("from", event.target.value)} /></label>
+        <label className="field"><span>To</span><input type="date" value={filters.to} disabled={Boolean(filters.date)} onChange={(event) => updateFilter("to", event.target.value)} /></label>
+        <label className="field"><span>Minimum seats</span><input type="number" min="0" step="1" value={filters.minSeats} onChange={(event) => updateFilter("minSeats", event.target.value)} /></label>
+        <label className="field"><span>Status</span><select value={filters.status} onChange={(event) => updateFilter("status", event.target.value)}><option value="scheduled">Scheduled</option><option value="">All statuses</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></label>
+        <label className="field"><span>Sort by</span><select value={filters.sort} onChange={(event) => updateFilter("sort", event.target.value)}><option value="departure">Departure</option><option value="price">Price</option></select></label>
+      </div>
       <Notice>{error}</Notice>
       {loading ? (
-        <Loading>Loading trips...</Loading>
-      ) : visible.length ? (
+            <LoadingState label="Loading trips..." />
+      ) : trips.length ? (
         <div className="trip-grid">
-          {visible.map((trip) => (
+          {trips.map((trip) => (
             <TripCard trip={trip} key={trip._id} />
           ))}
         </div>
       ) : (
-        <div className="empty-state">No trips match this search.</div>
+        <EmptyState title="No trips match these filters">Try a different origin, date, minimum seats, or sort order.</EmptyState>
       )}
+      {!loading && <Pagination page={page} pages={pages} onChange={setPage} />}
     </main>
   );
 }
@@ -219,6 +258,7 @@ function TripCard({ trip }) {
           <strong>{money(route.fare)}</strong>
         </div>
         <button
+          type="button"
           className="button button-primary"
           disabled={trip.status !== "scheduled" || trip.availableSeats < 1}
           onClick={() => navigate(`/trips/${trip._id}`)}
@@ -231,9 +271,12 @@ function TripCard({ trip }) {
 }
 
 export function TripDetails() {
-  const id = window.location.pathname.split("/").pop();
+  const { id } = useParams();
   const navigate = useNavigate();
   const [trip, setTrip] = useState(null);
+  const [quantity, setQuantity] = useState(1);
+  const [selectedSeats, setSelectedSeats] = useState([]);
+  const [bookingId, setBookingId] = useState(null);
   const [state, setState] = useState({
     loading: true,
     booking: false,
@@ -244,25 +287,29 @@ export function TripDetails() {
     api
       .get(`/api/trips/${id}`)
       .then((response) => setTrip(unwrap(response).data))
-      .catch((err) => setState({ ...state, error: apiError(err) }))
+      .catch((err) => setState((current) => ({ ...current, error: apiError(err) })))
       .finally(() => setState((current) => ({ ...current, loading: false })));
   }, [id]);
-  const book = async () => {
-    setState({ ...state, booking: true, error: "", success: "" });
+  const startPayment = async (existingBookingId = bookingId) => {
+    setState((current) => ({ ...current, booking: true, error: "", success: "" }));
     try {
-      const data = unwrap(
-        await api.post("/api/tickets/createticket", { trip: id }),
-      );
-      setState({ ...state, booking: false, success: data.message });
-      setTimeout(() => navigate("/tickets"), 1000);
+      let resolvedBookingId = existingBookingId;
+      if (!resolvedBookingId) {
+        const bookingBody = { trip: id, quantity, ...(trip.seatMap ? { seats: selectedSeats } : {}) };
+        const bookingResponse = unwrap(await api.post("/api/tickets/createticket", bookingBody));
+        resolvedBookingId = bookingResponse.data.bookingId;
+        setBookingId(resolvedBookingId);
+      }
+      const payment = unwrap(await api.post("/api/payments/initialize", { bookingId: resolvedBookingId }));
+      window.location.assign(payment.data.authorizationUrl);
     } catch (error) {
-      setState({ ...state, booking: false, error: apiError(error) });
+      setState((current) => ({ ...current, booking: false, error: apiError(error) }));
     }
   };
   if (state.loading)
     return (
       <main className="page-shell">
-        <Loading>Loading trip...</Loading>
+            <LoadingState label="Loading trip..." />
       </main>
     );
   if (!trip)
@@ -307,17 +354,44 @@ export function TripDetails() {
             <strong className="fare">{money(route.fare)}</strong>
           </div>
         </div>
+        <label className="field quantity-field">
+          <span>Tickets</span>
+          <select value={quantity} onChange={(event) => setQuantity(Number(event.target.value))}>
+            {Array.from({ length: Math.min(5, trip.availableSeats) }, (_, index) => index + 1).map((count) => (
+              <option value={count} key={count}>{count}</option>
+            ))}
+          </select>
+        </label>
+        {trip.seatMap && <section className="seat-map-section" aria-label="Seat map">
+          <div className="section-heading"><h2>Choose {quantity} seat{quantity === 1 ? "" : "s"}</h2><span>{selectedSeats.length} of {quantity} selected</span></div>
+          <div className="seat-map" style={{ "--seat-columns": trip.seatMap.columns }}>
+            {Array.from({ length: trip.seatMap.rows * trip.seatMap.columns }, (_, index) => {
+              const seatNumber = `${Math.floor(index / trip.seatMap.columns) + 1}${String.fromCharCode(65 + (index % trip.seatMap.columns))}`;
+              const occupied = trip.seatMap.occupiedSeats?.includes(seatNumber);
+              const selected = selectedSeats.includes(seatNumber);
+              return <button type="button" className={`seat-button${occupied ? " occupied" : ""}${selected ? " selected" : ""}`} aria-label={`Seat ${seatNumber}${occupied ? ", unavailable" : selected ? ", selected" : ""}`} aria-pressed={selected} disabled={occupied || (!selected && selectedSeats.length >= quantity)} key={seatNumber} onClick={() => setSelectedSeats((current) => selected ? current.filter((seat) => seat !== seatNumber) : [...current, seatNumber])}>{seatNumber}</button>;
+            })}
+          </div>
+          <div className="seat-legend"><span><i className="seat-key available" />Available</span><span><i className="seat-key selected" />Selected</span><span><i className="seat-key occupied" />Unavailable</span></div>
+        </section>}
+        <div className="price-summary">
+          <span>{money(route.fare)} × {quantity}</span>
+          <strong>{money(Number(route.fare) * quantity)}</strong>
+        </div>
         <button
+          type="button"
           className="button button-primary wide"
           disabled={
             state.booking ||
             trip.status !== "scheduled" ||
-            trip.availableSeats < 1
+            trip.availableSeats < quantity ||
+            (trip.seatMap && selectedSeats.length !== quantity)
           }
-          onClick={book}
+          onClick={() => startPayment()}
         >
-          {state.booking ? "Booking ticket..." : "Book this trip"}
+          {state.booking ? "Preparing secure checkout..." : "Continue to secure payment"}
         </button>
+        {bookingId && !state.booking && <button type="button" className="button button-quiet wide" onClick={() => startPayment(bookingId)}>Resume payment</button>}
       </div>
     </main>
   );
@@ -326,15 +400,22 @@ export function TripDetails() {
 export function Tickets() {
   const [tickets, setTickets] = useState([]);
   const [state, setState] = useState({ loading: true, error: "" });
-  const load = () =>
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [payingId, setPayingId] = useState(null);
+  const load = (currentPage = page) =>
     api
-      .get("/api/tickets/my-tickets")
-      .then((response) => setTickets(unwrap(response).data || []))
+      .get("/api/tickets/my-tickets", { params: { page: currentPage, limit: 20 } })
+      .then((response) => {
+        const result = unwrap(response);
+        setTickets(result.data || []);
+        setPages(result.meta?.pages || 1);
+      })
       .catch((err) => setState({ loading: false, error: apiError(err) }))
       .finally(() => setState((current) => ({ ...current, loading: false })));
   useEffect(() => {
     load();
-  }, []);
+  }, [page]);
   const cancel = async (id) => {
     if (!window.confirm("Cancel this ticket?")) return;
     try {
@@ -342,6 +423,17 @@ export function Tickets() {
       load();
     } catch (error) {
       setState((current) => ({ ...current, error: apiError(error) }));
+    }
+  };
+  const pay = async (ticket) => {
+    setPayingId(ticket._id);
+    setState((current) => ({ ...current, error: "" }));
+    try {
+      const payment = unwrap(await api.post("/api/payments/initialize", { ticketId: ticket._id }));
+      window.location.assign(payment.data.authorizationUrl);
+    } catch (error) {
+      setState((current) => ({ ...current, error: apiError(error) }));
+      setPayingId(null);
     }
   };
   return (
@@ -353,22 +445,19 @@ export function Tickets() {
       </PageTitle>
       <Notice>{state.error}</Notice>
       {state.loading ? (
-        <Loading>Loading tickets...</Loading>
+        <LoadingState label="Loading tickets..." />
       ) : tickets.length ? (
         <div className="ticket-list">
-          {tickets.map((ticket) => (
-            <TicketCard ticket={ticket} onCancel={cancel} key={ticket._id} />
+            {tickets.map((ticket) => (
+            <TicketCard ticket={ticket} onCancel={cancel} onPay={pay} paying={payingId === ticket._id} key={ticket._id} />
           ))}
         </div>
       ) : (
-        <div className="empty-state">
-          <h2>No tickets yet</h2>
-          <p>Choose a trip and your first ticket will be saved here.</p>
-          <Link className="button button-primary" to="/trips">
-            Find a trip
-          </Link>
-        </div>
+        <EmptyState title="No tickets yet" action={<Link className="button button-primary" to="/trips">Find a trip</Link>}>
+          Choose a trip and your first ticket will be saved here.
+        </EmptyState>
       )}
+      {!state.loading && <Pagination page={page} pages={pages} onChange={setPage} />}
     </main>
   );
 }
