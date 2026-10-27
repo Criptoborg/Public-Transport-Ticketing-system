@@ -13,4 +13,6 @@
 All API responses use `{ success, message, data }`. Preserve this envelope for success and error responses, and maintain existing route compatibility unless a requirement explicitly changes it.
 
 ## Privacy and Sensitive Data
-Protect personal data, credentials, and payment information. Collect and retain only what is needed; never commit secrets or expose them in logs, error responses, reports, or client-visible code. Redact sensitive values when reporting or debugging. The referenced Phase 9 item 6 privacy wording was not present in the supplied task prompt; replace this section with its exact rule when provided.
+Protect personal data, credentials, and payment information. Collect and retain only what is needed; never commit secrets or expose them in logs, error responses, reports, or client-visible code. Redact sensitive values when reporting or debugging.
+
+Any change that collects, stores, or shares new user data must update `docs/DATA_INVENTORY.md`, the Privacy Policy, and the `LEGAL_VERSION` constant in the same commit. Do not add analytics, advertising, tracking pixels, or tracking SDKs without updating those same records first. The privacy and legal pages must describe observed application behavior; owner/legal determinations must remain explicit `[OWNER TO CONFIRM: ...]` placeholders until supplied.

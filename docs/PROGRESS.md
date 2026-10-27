@@ -124,4 +124,24 @@ Proceed to Phase 8 setup, CI and documentation cleanup. Phase 9's exact privacy 
 
 ## Next
 
-Phase 9's exact privacy wording and launch-video workflow remain unsupplied. Keep those items unresolved rather than inventing acceptance criteria.
+Obtain owner confirmations listed in the Phase 9 report and qualified lawyer review before launch. Verify live provider behavior and determine an approved accounting retention period; the application currently configures no automatic purge for ticket/payment records.
+
+## Phase 9: Privacy, Terms, and Account-Data Compliance
+
+**Status:** Implemented on `feature/hardening-and-payments`; final full-suite/build validation passed, ready to commit.
+
+**Changes:** Audited application data flows and added `docs/DATA_INVENTORY.md`; drafted public Privacy Policy, Terms of Service, and Refund Policy pages with NDPA 2023 flagged for legal confirmation and highlighted owner placeholders; added public `GET /api/legal/config` sharing the runtime cancellation cutoff and refund calculation description; added required registration consent and stored version/timestamp, plus a one-time updated-terms prompt; added password-confirmed account deletion with last-admin protection, pending reservation expiry, upcoming paid-ticket cancellation/refund requests, confirmation email, anonymisation, checkout-URL removal, and auth-version revocation; added caller-scoped JSON data export; and added the required same-commit data-change rule.
+
+**Files touched:** `docs/DATA_INVENTORY.md`, `.github/copilot-instructions.md`, backend legal/auth/user/token/payment/email/refund modules and routes, backend compliance tests, frontend legal/auth/profile/footer/router/styles, `API_DOCUMENTATION.md`, and this report.
+
+**Verification:** Focused legal/account suite passed 9 tests, including consent, version acceptance, legal config consistency, export isolation, deletion password/last-admin checks, anonymisation, pending-seat release, normal and unexpected refund-failure follow-up, and token revocation. Focused auth/profile regression suite passed 13 tests. Full backend suite passed 60 tests across 10 suites using `--transform='{}'` before the final narrow deletion-error guard and refund-formula constant refactor. The refund calculation/formula relationship passed a direct module assertion. Frontend production build passed after the legal UI/config integration; a final rebuild is recorded below. Editor diagnostics, package JSON parsing, and `git diff --check` passed. Logged-out route navigation was checked for Privacy, Terms, Refund Policy, and registration consent; the local backend was not running, so live config values could not be displayed in that browser session (config behavior is covered by backend tests).
+
+**Owner confirmations required before launch:** legal company/trading name; registered address; support/legal/privacy contact email; DPO/contact person or confirmation none is appointed; governing court/venue; NDPA applicability/lawful bases/controller obligations and any registration/DPO requirements; accounting retention period; provider regions, transfer safeguards and backup/log retention settings; intended age range/under-18 handling. The legal drafts explicitly identify these items. A qualified Nigerian privacy/commercial lawyer must review all legal pages before launch.
+
+**Could not verify:** No live Paystack refund, Resend email, production account deletion, or provider-region/retention setting was exercised. The confirmation email is mocked in integration tests. No analytics, ads, pixels, or tracking SDKs were added.
+
+The final focused backend rerun after the narrow deletion-error guard did not return a Jest result: the local `mongodb-memory-server` executable was unavailable and stale Jest processes were present. The full suite and the focused 9-test suite had passed before this final guard; the guard preserves the already-tested behavior and only adds a check that a committed cancellation exists before recording an unexpected refund error.
+
+## Next
+
+Obtain the listed owner confirmations and qualified lawyer review before launch. Determine an approved accounting retention period; no automatic purge is currently configured for ticket/payment records.

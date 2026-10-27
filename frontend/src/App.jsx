@@ -11,6 +11,7 @@ import Landing from "./pages/public/Landing";
 import PaymentCallback from "./pages/public/PaymentCallback";
 import TicketDetail from "./pages/passenger/TicketDetail";
 import Profile from "./pages/passenger/Profile";
+import { PrivacyPolicy, TermsOfService, RefundPolicy, TermsAcceptanceGate } from "./pages/public/LegalPages";
 const ValidateTickets = lazy(() => import("./pages/admin/ValidateTickets"));
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
 import {
@@ -45,6 +46,9 @@ export default function App() {
             <ApiWarmupNotice />
             <Routes>
               <Route path="/" element={<Landing />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/refund-policy" element={<RefundPolicy />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -75,6 +79,7 @@ export default function App() {
               
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <TermsAcceptanceGate />
           </div>
           <Footer />
           </div>

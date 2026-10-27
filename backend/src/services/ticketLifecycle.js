@@ -2,6 +2,7 @@ const Ticket = require('../models/Ticket');
 const Trip = require('../models/Trip');
 const PaymentService = require('./paymentService');
 const mongoose = require('mongoose');
+const { getCancellationCutoffHours } = require('./legalConfig');
 
 const cancelTicket = async ({ ticketId, userId, isAdmin = false }) => {
   const session = await mongoose.startSession();
@@ -20,8 +21,7 @@ const cancelTicket = async ({ ticketId, userId, isAdmin = false }) => {
       const now = new Date();
       if (!isAdmin && trip.departureTime <= now) { failure = { status: 400, message: 'Tickets cannot be cancelled after departure' }; return; }
       if (!isAdmin) {
-        const configuredCutoffHours = Number(process.env.CANCEL_CUTOFF_HOURS || 2);
-        const cutoffHours = Number.isFinite(configuredCutoffHours) && configuredCutoffHours >= 0 ? configuredCutoffHours : 2;
+        const cutoffHours = getCancellationCutoffHours();
         if (now >= new Date(trip.departureTime.getTime() - cutoffHours * 60 * 60 * 1000)) {
           failure = { status: 400, message: `Tickets cannot be cancelled within ${cutoffHours} hours of departure` };
           return;

@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const { rateLimit } = require('express-rate-limit');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
+const { getPublicLegalConfig } = require('./services/legalConfig');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -54,6 +55,10 @@ app.get('/health', (req, res) => {
     message: readyState === 1 ? 'Service is healthy' : 'Database is unavailable',
     data: { database: readyState === 1 ? 'connected' : 'disconnected' }
   });
+});
+
+app.get('/api/legal/config', (req, res) => {
+  res.json({ success: true, message: 'Legal configuration retrieved successfully', data: getPublicLegalConfig() });
 });
 
 app.use('/api/auth', require('./routes/AuthRoutes'));

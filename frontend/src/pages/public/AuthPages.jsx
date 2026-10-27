@@ -87,7 +87,7 @@ export function Login() {
 
 export function Register() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", termsAccepted: false });
   const [state, setState] = useState({
     loading: false,
     error: "",
@@ -141,6 +141,7 @@ export function Register() {
           onChange={(e) => setForm({ ...form, password: e.target.value })}
         />
         <p className="field-hint">Use at least 8 characters, including a letter and a number.</p>
+        <label className="consent-field"><input type="checkbox" required checked={form.termsAccepted} onChange={(event) => setForm({ ...form, termsAccepted: event.target.checked })} /><span>I agree to the <Link to="/terms">Terms of Service</Link> and <Link to="/privacy">Privacy Policy</Link>.</span></label>
         <button type="submit" className="button button-primary" disabled={state.loading}>
           {state.loading ? "Creating account..." : "Create account"}
         </button>

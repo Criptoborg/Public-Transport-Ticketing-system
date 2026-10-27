@@ -7,6 +7,7 @@ const getPagination = require('../utils/pagination');
 const PaymentService = require('../services/paymentService');
 const TicketLifecycle = require('../services/ticketLifecycle');
 const QrTicketService = require('../services/qrTicketService');
+const { getPendingTicketMinutes, getBoardingWindowMinutes } = require('../services/legalConfig');
 
 const ticketDetails = (query) => Ticket.find(query)
   .populate('user', 'name email')
@@ -40,7 +41,7 @@ const createTicket = async (req, res, next) => {
 
       const session = await mongoose.startSession();
       const bookingId = crypto.randomUUID();
-      const reservedUntil = new Date(Date.now() + Math.max(1, Number(process.env.PENDING_TICKET_MINUTES) || 15) * 60 * 1000);
+      const reservedUntil = new Date(Date.now() + getPendingTicketMinutes() * 60 * 1000);
       let tickets = [];
       try {
         await session.withTransaction(async () => {
@@ -105,7 +106,7 @@ const createTicket = async (req, res, next) => {
     }
 
     const bookingId = crypto.randomUUID();
-    const reservedUntil = new Date(Date.now() + Math.max(1, Number(process.env.PENDING_TICKET_MINUTES) || 15) * 60 * 1000);
+    const reservedUntil = new Date(Date.now() + getPendingTicketMinutes() * 60 * 1000);
     try {
       let tickets;
       for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -223,10 +224,7 @@ const validateTicket = async (req, res, next) => {
       return res.json({ success: true, message: 'Trip is cancelled or no longer boarding', data: { result: 'wrong_trip', ...safeData } });
     }
 
-    const configuredBefore = Number(process.env.BOARDING_WINDOW_BEFORE_MINUTES);
-    const configuredAfter = Number(process.env.BOARDING_WINDOW_AFTER_MINUTES);
-    const beforeMinutes = Number.isFinite(configuredBefore) && configuredBefore >= 0 ? configuredBefore : 60;
-    const afterMinutes = Number.isFinite(configuredAfter) && configuredAfter >= 0 ? configuredAfter : 30;
+    const { before: beforeMinutes, after: afterMinutes } = getBoardingWindowMinutes();
     const now = Date.now();
     const departure = new Date(ticket.trip?.departureTime).getTime();
     if (!Number.isFinite(departure) || now < departure - beforeMinutes * 60000 || now > departure + afterMinutes * 60000) {

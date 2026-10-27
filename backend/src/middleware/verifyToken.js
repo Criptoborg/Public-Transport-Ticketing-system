@@ -19,8 +19,9 @@ const verifyToken = async (req, res, next) => {
   }
 
   try {
-    const user = await User.findById(payload.id).select('_id role').lean();
-    if (!user) return res.status(401).json({ success: false, message: 'User account no longer exists', data: null });
+    const user = await User.findById(payload.id).select('_id role authVersion deletedAt').lean();
+    if (!user || user.deletedAt) return res.status(401).json({ success: false, message: 'User account no longer exists', data: null });
+    if ((payload.authVersion ?? 0) !== (user.authVersion ?? 0)) return res.status(401).json({ success: false, message: 'Authentication session was revoked', data: null });
     req.user = { id: user._id.toString(), role: user.role };
     next();
   } catch (error) {

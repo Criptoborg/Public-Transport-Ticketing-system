@@ -273,6 +273,8 @@ Protected backend endpoints require a valid JWT, while role-based authorization 
 
 Public registration creates passenger accounts. Administrative functionality is restricted to authorized admin users.
 
+Registration requires acceptance of the [Terms of Service](/terms) and [Privacy Policy](/privacy). The public [Refund Policy](/refund-policy) reads the active passenger cancellation cutoff and refund calculation through `GET /api/legal/config`. These are engineering drafts, not legal advice; a qualified Nigerian lawyer must review them before launch. The privacy notice treats the Nigeria Data Protection Act 2023 as the likely governing data-protection law, subject to owner/counsel confirmation. Signed-in users can download their data or request account deletion from Profile. Account deletion anonymises account identity, processes refunds for upcoming paid tickets, and retains pseudonymised ticket/payment records pending owner-approved accounting retention.
+
 ---
 
 ## 🗺️ Fare Calculation

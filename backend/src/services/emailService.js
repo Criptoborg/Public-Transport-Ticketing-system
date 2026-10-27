@@ -57,4 +57,10 @@ const sendTripReminder = (user, ticket) => {
   });
 };
 
-module.exports = { sendWelcomeEmail, sendPasswordResetEmail, sendBookingConfirmation, sendRefundNotification, sendTripReminder };
+const sendAccountDeletionConfirmation = (user) => sendEmail({
+  to: user.email,
+  subject: 'We received your Routely account deletion request',
+  text: `Hello ${user.name},\n\nWe received your request to delete your Routely account. We are processing the request now; your personal account details will be anonymised and any refund that cannot be completed will be recorded for follow-up. If you did not request this, please use the support contact shown on the Routely website.`
+});
+
+module.exports = { sendWelcomeEmail, sendPasswordResetEmail, sendBookingConfirmation, sendRefundNotification, sendTripReminder, sendAccountDeletionConfirmation };

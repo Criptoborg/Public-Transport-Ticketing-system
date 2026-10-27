@@ -82,6 +82,12 @@ Checks whether the API is running.
 
 Base path: `/api/auth`
 
+## Public Legal Configuration
+
+### GET `/api/legal/config`
+
+No authentication required. Returns `legalVersion`, `effectiveDate`, the configured passenger cancellation cutoff (`CANCEL_CUTOFF_HOURS`, default 2), pending reservation duration (`PENDING_TICKET_MINUTES`, default 15), boarding window (`BOARDING_WINDOW_BEFORE_MINUTES`/`BOARDING_WINDOW_AFTER_MINUTES`, defaults 60/30), and the current refund amount formula generated alongside the refund function. Legal pages use this endpoint so policy values track API behavior.
+
 ## Register Passenger
 
 ### POST `/api/auth/register`
@@ -96,15 +102,17 @@ Creates a new passenger account. New users receive the `passenger` role by defau
 {
   "name": "John Doe",
   "email": "john@example.com",
-  "password": "password123"
+  "password": "password123",
+  "termsAccepted": true
 }
 ```
 
 **Validation**
 
-- `name`, `email`, and `password` are required.
+- `name`, `email`, `password`, and `termsAccepted: true` are required.
 - Email must be valid.
 - Password must contain at least 8 characters, including a letter and a number.
+- The accepted legal version and timestamp are stored on the user record.
 - Email must not already be registered.
 
 **Success:** `201 Created`
@@ -249,6 +257,18 @@ Requires a valid JWT. Body: `{ "name": "Ada Lovelace" }`. Updates only the curre
 ### POST `/api/auth/change-password`
 
 Requires a valid JWT. Body: `{ "currentPassword": "...", "newPassword": "..." }`. The current password must be correct; the new password must be at least 8 characters and contain a letter and a number. Existing sessions are not revoked.
+
+### POST `/api/auth/me/accept-terms`
+
+Requires a valid JWT and `{ "termsAccepted": true }`. Records the current `LEGAL_VERSION` and acceptance timestamp.
+
+### GET `/api/auth/me/export`
+
+Requires a valid JWT. Downloads a JSON envelope containing only the caller's profile, tickets, and payment references/statuses.
+
+### DELETE `/api/auth/me`
+
+Requires a valid JWT and `{ "currentPassword": "...", "confirmation": "DELETE" }`. Refuses deletion of the last admin. Upcoming paid tickets are cancelled and refunds requested first; failed refunds remain recorded for admin follow-up. A confirmation email is sent before the account identity is anonymised. The account credentials/reset fields are removed, the name/email are replaced with non-identifying values, and the auth version is incremented so existing tokens are revoked. Ticket/payment records remain pseudonymised for accounting/refund follow-up; no automatic retention purge is currently configured.
 
 ## Payments
 

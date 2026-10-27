@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api, { apiError, unwrap } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import Notice from "../../components/common/Notice";
@@ -8,10 +9,12 @@ const initialPassword = { currentPassword: "", newPassword: "", confirmPassword:
 const passwordValid = (value) => value.length >= 8 && /[A-Za-z]/.test(value) && /\d/.test(value);
 
 export default function Profile() {
-  const { updateUser } = useAuth();
+  const { updateUser, logout } = useAuth();
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [password, setPassword] = useState(initialPassword);
-  const [state, setState] = useState({ loading: true, savingName: false, savingPassword: false, error: "", success: "" });
+  const [deleteForm, setDeleteForm] = useState({ currentPassword: "", confirmation: "" });
+  const [state, setState] = useState({ loading: true, savingName: false, savingPassword: false, exporting: false, deleting: false, error: "", success: "" });
 
   useEffect(() => {
     api.get("/api/auth/me")
@@ -56,6 +59,35 @@ export default function Profile() {
     }
   };
 
+  const exportData = async () => {
+    setState((current) => ({ ...current, exporting: true, error: "", success: "" }));
+    try {
+      const response = await api.get("/api/auth/me/export");
+      const file = new Blob([JSON.stringify(response.data.data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(file);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "routely-account-data.json";
+      link.click();
+      URL.revokeObjectURL(url);
+      setState((current) => ({ ...current, exporting: false, success: "Your account data export has been downloaded." }));
+    } catch (error) {
+      setState((current) => ({ ...current, exporting: false, error: apiError(error) }));
+    }
+  };
+
+  const deleteAccount = async (event) => {
+    event.preventDefault();
+    setState((current) => ({ ...current, deleting: true, error: "", success: "" }));
+    try {
+      const response = unwrap(await api.delete("/api/auth/me", { data: deleteForm }));
+      logout();
+      navigate("/", { replace: true, state: { notice: response.message } });
+    } catch (error) {
+      setState((current) => ({ ...current, deleting: false, error: apiError(error) }));
+    }
+  };
+
   if (state.loading) return <main className="page-shell"><LoadingState label="Loading your profile..." /></main>;
 
   return (
@@ -67,6 +99,20 @@ export default function Profile() {
         <form className="admin-form" onSubmit={saveName}>
           <label className="field"><span>Full name</span><input required minLength="2" maxLength="100" value={name} onChange={(event) => setName(event.target.value)} /></label>
           <button type="submit" className="button button-primary" disabled={state.savingName}>{state.savingName ? "Saving..." : "Save name"}</button>
+        </form>
+      </section>
+      <section className="profile-section">
+        <h2>Account data</h2>
+        <p>Download a JSON copy of your profile, tickets, bookings, and payment references.</p>
+        <button type="button" className="button button-quiet" disabled={state.exporting} onClick={exportData}>{state.exporting ? "Preparing export..." : "Download my data"}</button>
+      </section>
+      <section className="profile-section profile-danger-zone">
+        <h2>Delete my account</h2>
+        <p>This anonymises your account and revokes existing sessions. Ticket and payment records may remain pseudonymised for accounting and refund follow-up.</p>
+        <form className="admin-form" onSubmit={deleteAccount}>
+          <label className="field"><span>Current password</span><input type="password" autoComplete="current-password" required value={deleteForm.currentPassword} onChange={(event) => setDeleteForm((current) => ({ ...current, currentPassword: event.target.value }))} /></label>
+          <label className="field"><span>Type DELETE to confirm</span><input required pattern="DELETE" value={deleteForm.confirmation} onChange={(event) => setDeleteForm((current) => ({ ...current, confirmation: event.target.value }))} /></label>
+          <button type="submit" className="button button-danger" disabled={state.deleting || deleteForm.confirmation !== "DELETE"}>{state.deleting ? "Deleting account..." : "Delete my account"}</button>
         </form>
       </section>
       <section className="profile-section">

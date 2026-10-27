@@ -43,7 +43,7 @@ const calculateRouteFare = async (originCoordinates, destinationCoordinates) => 
     const distanceKm = distanceMeters / 1000;
     return { distanceKm: Number(distanceKm.toFixed(2)), fare: calculateFare(distanceKm) };
   } catch (error) {
-    console.warn(`OpenRouteService unavailable; using straight-line distance: ${error.message}`);
+    console.warn('OpenRouteService unavailable; using local distance fallback');
     return calculateLocalRouteFare(originCoordinates, destinationCoordinates);
   }
 };

@@ -227,9 +227,10 @@ const processWebhookEvent = async (event) => {
   return result.accepted;
 };
 
-const expirePendingTickets = async ({ userId } = {}) => {
+const expirePendingTickets = async ({ userId, includeUnexpired = false } = {}) => {
   const now = new Date();
-  const filter = { status: 'pending', reservedUntil: { $lte: now } };
+  const filter = { status: 'pending' };
+  if (!includeUnexpired) filter.reservedUntil = { $lte: now };
   if (userId) filter.user = userId;
   const session = await mongoose.startSession();
   let expiredCount = 0;
@@ -239,7 +240,7 @@ const expirePendingTickets = async ({ userId } = {}) => {
       if (!expired.length) return;
       const ids = expired.map((ticket) => ticket._id);
       const transitioned = await Ticket.updateMany(
-        { _id: { $in: ids }, status: 'pending', reservedUntil: { $lte: now } },
+        { _id: { $in: ids }, status: 'pending', ...(includeUnexpired ? {} : { reservedUntil: { $lte: now } }) },
         { $set: { status: 'expired' } },
         { session }
       );

@@ -92,6 +92,8 @@ Successful responses use `{ "success": true, "message": "...", "data": ... }`. E
 
 ## Authentication endpoints
 
+Public `GET /api/legal/config` returns the active legal version, passenger cancellation cutoff, and refund amount formula. Registration requires `{ "termsAccepted": true }`; the server records the accepted version and time. Authenticated `POST /api/auth/me/accept-terms` with `{ "termsAccepted": true }` records updated terms after the in-app prompt. `GET /api/auth/me/export` downloads the current user's profile, ticket, and payment-reference data. `DELETE /api/auth/me` requires the current password and `confirmation: "DELETE"`; it refuses the last admin, cancels/refunds upcoming paid tickets before anonymisation, and revokes existing sessions. Failed refunds remain for admin follow-up. Account deletion retains pseudonymised ticket/payment records and has no configured purge interval.
+
 | Method | URL | Auth | Purpose |
 |---|---|---|---|
 | POST | `/api/auth/register` | No | Register a passenger. Body: `{ "name", "email", "password" }`; password must be at least 8 characters and contain a letter and a number. |
