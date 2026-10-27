@@ -730,6 +730,95 @@ h2 {
 .admin-stat small {
   color: #bd5b4e;
 }
+.admin-kpis {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 28px;
+}
+.admin-kpis .admin-stat {
+  min-height: 130px;
+  padding: 20px;
+}
+.admin-kpis .admin-stat strong {
+  font-size: 2rem;
+  overflow-wrap: anywhere;
+}
+.admin-analytics-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.admin-report-section {
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid var(--line);
+  background: #fff;
+  margin-bottom: 20px;
+}
+.admin-report-section h2 {
+  font-size: 1.25rem;
+}
+.chart-container {
+  width: 100%;
+  height: 280px;
+}
+.admin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.88rem;
+}
+.admin-table th,
+.admin-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.admin-table th {
+  color: #475569;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+.ticket-filters,
+.user-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 18px;
+}
+.ticket-filters > input,
+.ticket-filters > select,
+.user-toolbar > input,
+.admin-table select {
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+}
+.ticket-filters > input { flex: 1 1 220px; }
+.ticket-filters > select { flex: 1 1 155px; }
+.ticket-filters .field { flex: 0 1 145px; }
+.user-toolbar > input { flex: 1 1 260px; }
+.user-toolbar > span { color: var(--muted); font-size: 0.82rem; }
+.status-conductor {
+  color: #174e6b;
+  background: #e8f4fb;
+}
+@media (max-width: 900px) {
+  .admin-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-analytics-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .admin-kpis { grid-template-columns: 1fr; }
+  .admin-report-section { padding: 16px; }
+}
 .admin-two-col {
   display: grid;
   grid-template-columns: minmax(280px, 0.7fr) 1.3fr;

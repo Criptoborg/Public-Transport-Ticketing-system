@@ -43,6 +43,12 @@ Before enabling payments on an existing database, run `node scripts/migrate-exis
 
 Eligible cancellations initiate partial refunds per ticket for multi-ticket bookings. Provider acceptance marks tickets `refunded`; failures are saved as `refund_failed` for admin follow-up. Bank/card posting times depend on Paystack and the provider.
 
+## Admin reporting and users
+
+`GET /api/admin/stats?days=30` returns aggregate net revenue, tickets sold/status totals, top routes with net revenue and average seat fill, and a continuous daily booking series. `days` is clamped from 1 to 90. `GET /api/admin/tickets` accepts `status`, `paymentStatus`, `route`, `startDate`, `endDate` and `search` filters; `GET /api/admin/tickets/export.csv` exports the same filtered set.
+
+`GET /api/admin/users` lists/searches users with pagination. `PATCH /api/admin/users/:id/role` accepts `passenger`, `conductor`, or `admin`. The current admin cannot demote their own account, and the database guards against demoting the last remaining admin. Trip cancellation runs the ticket/refund cascade and deliberately restores no seats.
+
 ## QR tickets and boarding validation
 
 After payment, each ticket receives a JWT signed with `QR_SIGNING_SECRET`; its payload contains only the ticket ID and ticket reference. Keep this secret separate from `JWT_SECRET`. The frontend renders the signed token as a QR; card/list responses do not include it. Admins and users with the `conductor` role can call `POST /api/tickets/validate` with `{ "code": "SIGNED_QR_TOKEN_OR_REFERENCE" }`. Boarding is limited to the configured window before and after departure (defaults 60 and 30 minutes), and an active paid ticket is atomically marked used once. Create conductor accounts only through trusted database administration, never public registration.
@@ -164,6 +170,16 @@ Example booking response data includes `ticketReference`, `amount`, `status`, `p
 |---|---|---|---|
 | GET | `/api/admin/tickets` | Admin | List all issued tickets with passenger, trip and route details. |
 | PATCH | `/api/admin/tickets/:id/status` | Admin | Change status. Body: `{ "status": "active" }`, `used`, or `cancelled`. |
+
+## Admin reporting and access
+
+- `GET /api/admin/stats?days=30` returns total net revenue (paid revenue minus completed refunds), tickets sold/status totals, top ten routes with net revenue and average seat fill, and a continuous daily booking series. `days` is clamped to 1–90.
+- `GET /api/admin/tickets` accepts `status`, `paymentStatus`, `route`, `startDate`, `endDate`, and `search`; data remains paginated.
+- `GET /api/admin/tickets/export.csv` exports the same filtered set.
+- `GET /api/admin/users` accepts `page`, `limit`, and name/email `search`.
+- `PATCH /api/admin/users/:id/role` accepts `passenger`, `conductor`, or `admin`. Self-demotion is denied, and a database lock protects the final admin during concurrent role changes.
+
+The admin dashboard reports revenue, ticket counts, booking trends, top routes, and failed refunds. Trip cancellation runs the ticket/refund cascade and does not restore trip seats.
 
 ## Postman testing order
 

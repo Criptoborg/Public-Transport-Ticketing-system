@@ -11,6 +11,7 @@ import Landing from "./pages/public/Landing";
 import PaymentCallback from "./pages/public/PaymentCallback";
 import TicketDetail from "./pages/passenger/TicketDetail";
 const ValidateTickets = lazy(() => import("./pages/admin/ValidateTickets"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
 import {
   Login,
   Register,
@@ -64,6 +65,8 @@ export default function App() {
                   <Route path="/admin/routes" element={<AdminRoutes />} />
                   <Route path="/admin/trips" element={<AdminTrips />} />
                   <Route path="/admin/tickets" element={<AdminTickets />} />
+                  <Route path="/admin/users" element={<Suspense fallback={<div className="page-shell"><LoadingState label="Loading users..." /></div>}><AdminUsers /></Suspense>} />
+                  <Route path="/admin/users" element={<Suspense fallback={<div className="page-shell"><LoadingState label="Loading users..." /></div>}><AdminUsers /></Suspense>} />
                 </Route>
               </Route>
               

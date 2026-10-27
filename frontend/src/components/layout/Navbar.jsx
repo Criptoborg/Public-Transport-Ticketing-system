@@ -29,6 +29,7 @@ export default function Navbar() {
             <NavLink to="/admin/routes">Routes</NavLink>
             <NavLink to="/admin/trips">Trips</NavLink>
             <NavLink to="/admin/tickets">Tickets</NavLink>
+            <NavLink to="/admin/users">Users</NavLink>
             <NavLink to="/admin/validate-tickets">Validate tickets</NavLink>
             <button type="button" className="text-button" onClick={exit}>
               Sign out

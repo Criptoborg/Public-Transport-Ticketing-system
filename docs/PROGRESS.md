@@ -63,3 +63,19 @@ Provide Phases 4–9, including the exact Phase 9 item 6 privacy rule, to contin
 ## Next
 
 Provide Phases 5–9 and the exact Phase 9 item 6 privacy rule. The launch-video workflow is still unspecified.
+
+## Phase 5: Admin Features
+
+**Status:** Implemented on `feature/hardening-and-payments`; ready to commit.
+
+**Changes:** Added Mongo aggregation stats for net revenue, tickets, status counts, route revenue/tickets/seat fill and daily bookings (1–90 days); filtered paginated admin tickets with matching CSV export; failed-refund attention endpoint; sold/total seats and consequence-confirming trip cancellation; searchable paginated users and guarded passenger/conductor/admin role changes with self-demotion and concurrent last-admin protection. Rebuilt admin dashboard with KPI panels, responsive bookings chart, top-routes table, refund list, ticket filters/export, and Users page.
+
+**Files touched:** Admin controllers/routes, role-lock model, admin database tests, admin frontend module/Users page/router/nav/styles, API/root/backend docs, and this report.
+
+**Verification:** Admin MongoDB integration suite passed 5/5. Frontend build passed without warnings after using a native SVG line chart instead of Recharts; the Recharts dependency was removed because its partially installed dependency tree could not resolve `es-toolkit` in this environment. Full backend suite, syntax checks, and production dependency audit are run for final acceptance below.
+
+**Decision:** A transactional singleton lock serializes role changes; this keeps the last-admin invariant under concurrent demotions. Seat fill is measured from trip capacity versus currently available seats.
+
+## Next
+
+Provide Phases 6–9, including the exact Phase 9 item 6 privacy rule. Launch-video workflow remains unspecified.

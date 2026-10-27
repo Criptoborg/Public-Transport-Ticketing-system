@@ -268,6 +268,16 @@ Returns ticket details for the owner or admin. Paid active tickets include a sig
 
 Requires an admin or conductor account. Body: `{ "code": "SIGNED_QR_TOKEN_OR_TICKET_REFERENCE" }`. A paid active ticket inside the configured boarding window is atomically changed to `used`. Results include `valid`, `already_used`, `cancelled`, `expired`, `unpaid`, `wrong_trip`, or `not_found`; passenger data is limited to first name and route.
 
+## Admin reporting and user access
+
+- `GET /api/admin/stats?days=30` — MongoDB aggregate dashboard metrics; days is limited to 90.
+- `GET /api/admin/tickets` — paginated ticket list; accepts status, paymentStatus, route, startDate, endDate and search filters.
+- `GET /api/admin/tickets/export.csv` — exports all matching filtered tickets as CSV.
+- `GET /api/admin/users?page=1&limit=20&search=...` — paginated user list.
+- `PATCH /api/admin/users/:id/role` with `{ "role": "passenger|conductor|admin" }` — changes role while preserving at least one administrator and disallowing self-demotion.
+
+`GET /api/admin/stats?days=30` returns `totalRevenue`, `ticketsSold`, `ticketsByStatus`, `topRoutes`, and `bookingsPerDay`. Days are limited to 90. Admin ticket filters are shared by the paginated JSON endpoint and CSV export.
+
 ### GET `/api/tickets/:id`
 
 Requires the ticket owner or an admin. Returns detailed ticket, route, departure/arrival, and server-calculated `cancellationAllowed`. The signed QR token is returned only for the owner/admin detail response and only for paid, active tickets.
