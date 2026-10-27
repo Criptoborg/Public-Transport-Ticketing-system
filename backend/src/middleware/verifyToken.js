@@ -2,6 +2,9 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 const verifyToken = async (req, res, next) => {
+  if (!process.env.JWT_SECRET) {
+    return res.status(500).json({ success: false, message: 'JWT secret is not configured', data: null });
+  }
   const authorization = req.headers.authorization;
   const token = authorization && authorization.startsWith('Bearer ')
     ? authorization.split(' ')[1]
@@ -13,7 +16,7 @@ const verifyToken = async (req, res, next) => {
 
   let payload;
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET);
+    payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
   } catch (error) {
     return res.status(401).json({ success: false, message: 'Invalid or expired authentication token', data: null });
   }

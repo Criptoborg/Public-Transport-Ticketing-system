@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const mongoose = require('mongoose');
 const { rateLimit } = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 const { getPublicLegalConfig } = require('./services/legalConfig');
@@ -16,15 +17,21 @@ const allowedOrigins = (process.env.FRONTEND_URL || '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
-if (process.env.NODE_ENV !== 'production') allowedOrigins.push('http://localhost:5173');
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.push('http://localhost:5173', 'http://127.0.0.1:5173');
+}
 
 app.use(cors({
   origin: (origin, callback) => callback(null, !origin || allowedOrigins.includes(origin)),
   allowedHeaders: ['Content-Type', 'Authorization'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 }));
+
 app.post('/api/payments/webhook', express.raw({ type: 'application/json', limit: '32kb' }), require('./controllers/PaymentController').webhook);
+app.post('/api/payments/legacy/webhook', express.raw({ type: 'application/json', limit: '32kb' }), require('./controllers/LegacyPaymentController').webhook);
+app.use(express.urlencoded({ extended: true, limit: '32kb' }));
 app.use(express.json({ limit: '32kb' }));
+app.use(mongoSanitize());
 
 app.use('/api', rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -79,12 +86,10 @@ if (require.main === module) {
   connectDB().then(() => {
     require('./services/paymentService').startExpiryJob();
     require('./services/tripReminderService').startReminderJob();
-    require('./services/tripReminderService').startReminderJob();
     const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
     process.once('SIGTERM', () => {
       server.close(async () => {
         require('./services/paymentService').stopExpiryJob();
-        require('./services/tripReminderService').stopReminderJob();
         require('./services/tripReminderService').stopReminderJob();
         await mongoose.disconnect();
         process.exit(0);

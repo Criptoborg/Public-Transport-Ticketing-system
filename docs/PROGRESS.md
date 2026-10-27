@@ -142,6 +142,28 @@ Obtain owner confirmations listed in the Phase 9 report and qualified lawyer rev
 
 The final focused backend rerun after the narrow deletion-error guard did not return a Jest result: the local `mongodb-memory-server` executable was unavailable and stale Jest processes were present. The full suite and the focused 9-test suite had passed before this final guard; the guard preserves the already-tested behavior and only adds a check that a committed cancellation exists before recording an unexpected refund error.
 
+## PR #2 Merge Repair
+
+**Status:** Merge from `personal/Prince-edit` resolved locally on `feature/hardening-and-payments`; validation passed, ready to commit and push.
+
+**Diagnosis:** Local `origin/Prince-edit` (`f5f306f`) was an ancestor of the feature branch, so merging it reported “Already up to date.” PR #2 actually targets `personal/Prince-edit` (`c4e3af6`), which has 10 commits beyond the shared merge base. The feature branch had not existed on `origin`; it was previously published only on `personal`. A backup branch was created before changes. The feature branch was safely pushed to `origin` with an upstream and no force push.
+
+**Changes:** Merged the actual PR base, retained the required union of `.gitignore` and placeholder-only backend env variables, combined backend package scripts/dependencies, regenerated the backend lockfile with npm, added Mongo sanitization and URL-encoded parsing while retaining strict feature CORS/body/rate limits, health/legal endpoints and graceful job shutdown, combined HS256 enforcement with database-backed token revocation, and added the target optional Payment reference to the feature ticket schema. The two incompatible payment flows are both preserved: booking/ticket PaymentAttempt remains canonical, and target-side trip-based Payment records are namespaced under `/api/payments/legacy`. Added legacy initialization/webhook security tests. Frontend install updated its lockfile without a package manifest change.
+
+**Verification:** Backend `npm test` passed 62 tests across 10 suites. Frontend `npm install` completed and `npm run build` passed. No source conflict markers or unmerged paths remain. Backend `npm audit fix` cleared all findings. Frontend `npm audit fix` applied non-breaking fixes; subsequent build passed.
+
+**Remaining security items:** Frontend audit still reports 2 moderate production React Router advisories and 3 moderate/2 critical development advisories involving Vitest/tinypool. npm says eliminating the development findings requires `npm audit fix --force` and Vitest 5; that breaking upgrade was not applied. The production React Router issue also requires a breaking major upgrade according to npm, so it remains for deliberate review. The dependency `react-router-dom` on the backend was retained from the PR target to preserve its manifest entry, though the backend does not import it. Git staged whitespace validation reports one extra blank line at EOF in the auto-merged `frontend/src/pages/public/Landing.jsx`; no code lines were removed or rewritten from either side. Resolve that cosmetic warning before committing only if the owner approves editing the auto-merged frontend file.
+
+## PR #2 Merge Repair
+
+**Status:** Merged locally on `feature/hardening-and-payments`; backend tests and frontend build passed. Ready to commit and push the merge.
+
+**Diagnosis:** Local `origin/Prince-edit` (`f5f306f`) was an ancestor of the feature branch, so merging it reported “Already up to date.” PR #2 actually targets `personal/Prince-edit` (`c4e3af6`), which has 10 commits beyond the shared merge base. The feature branch was safely pushed to `origin` with an upstream and no force push; a backup branch was created before changes.
+
+**Resolution:** Combined `.gitignore` and placeholder-only env variables; merged package scripts/dependencies and regenerated the backend lockfile with npm. Added `express-mongo-sanitize` and URL-encoded parsing while retaining strict feature CORS, body/rate limits, health/legal endpoints, auth-specific throttles, and graceful job shutdown. Combined HS256 checks with database-backed session revocation. Retained the feature booking/PaymentAttempt payment API as canonical, and preserved the target trip-based `Payment` model API under `/api/payments/legacy`; added legacy authentication/webhook tests. Ticket references keep the feature's longer human-readable random format.
+
+**Verification:** Backend tests passed: 62 tests across 10 suites. Frontend `npm install` completed and `npm run build` passed. No unresolved index entries or source conflict markers remain. Backend `npm audit fix` cleared all findings. Frontend `npm audit fix` was applied without `--force`; `npm audit --omit=dev` reports 2 moderate React Router advisories, and full `npm audit` reports 5 remaining findings (3 moderate, 2 critical) in React Router/Vitest/tinypool. npm says those require breaking upgrades with `--force`; none were applied. A cached diff check reports one auto-merge trailing blank line in `frontend/src/pages/public/Landing.jsx` only.
+
 ## Next
 
 Obtain the listed owner confirmations and qualified lawyer review before launch. Determine an approved accounting retention period; no automatic purge is currently configured for ticket/payment records.

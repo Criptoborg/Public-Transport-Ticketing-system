@@ -31,6 +31,8 @@ BOARDING_WINDOW_AFTER_MINUTES=30
 
 `TRIP_REMINDER_INTERVAL_MINUTES` controls the reminder job scan interval (default 1 minute); eligible paid tickets are emailed once as they reach approximately three hours before departure.
 
+The canonical pending-booking payment API uses `POST /api/payments/initialize` with a booking/ticket ID and the signed webhook at `/api/payments/webhook`. The pre-existing trip-based payment API is retained separately under `/api/payments/legacy`: initialize with `tripId`/`quantity`, verify by reference, and read a payment by ID. Its independent `Payment` records and `PAYMENT_TIMEOUT_MINUTES` remain for compatibility; new frontend work should use the canonical pending-booking API. `BACKEND_URL` is used for the legacy callback fallback; `PAYSTACK_PUBLIC_KEY` is a client-facing provider key and must contain only the Paystack public key, never the secret.
+
 ## Seed scripts
 
 `npm run seed:admin` requires `SEED_ADMIN_NAME`, `SEED_ADMIN_EMAIL`, and `SEED_ADMIN_PASSWORD`. The password must be at least 16 characters and include lowercase/uppercase letters, a number, and a symbol. It is hashed with bcrypt, never printed, and an existing non-admin account is never promoted.

@@ -360,4 +360,29 @@ describe('Paystack ticket lifecycle', () => {
     expect((await Ticket.findById(paidTicket._id)).paymentStatus).toBe('refunded');
     expect((await Ticket.findById(failedTicket._id)).paymentStatus).toBe('refund_failed');
   });
+
+  test('legacy payment initialization is namespaced, authenticated, and validates trip IDs', async () => {
+    const unauthenticated = await request(app)
+      .post('/api/payments/legacy/initialize')
+      .send({ tripId: trip._id.toString() });
+    const invalid = await request(app)
+      .post('/api/payments/legacy/initialize')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tripId: 'invalid-trip-id' });
+
+    expect(unauthenticated.status).toBe(401);
+    expect(invalid.status).toBe(400);
+    expect(invalid.body.message).toBe('Invalid trip ID');
+  });
+
+  test('legacy webhook rejects forged signatures', async () => {
+    const response = await request(app)
+      .post('/api/payments/legacy/webhook')
+      .set('x-paystack-signature', 'bad-signature')
+      .set('Content-Type', 'application/json')
+      .send({ event: 'charge.success', data: { reference: 'REF-123' } });
+
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe('Invalid Paystack signature');
+  });
 });

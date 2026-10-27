@@ -4,6 +4,7 @@ const ticketSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     trip: { type: mongoose.Schema.Types.ObjectId, ref: 'Trip', required: true },
+    payment: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment', default: null },
     seatNumber: { type: String },
     bookingId: { type: String, required: true, index: true },
     ticketReference: { type: String, required: true, unique: true },
