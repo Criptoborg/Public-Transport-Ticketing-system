@@ -198,6 +198,9 @@ PENDING_TICKET_MINUTES=15
 QR_SIGNING_SECRET=replace_with_a_separate_long_random_secret
 BOARDING_WINDOW_BEFORE_MINUTES=60
 BOARDING_WINDOW_AFTER_MINUTES=30
+SEED_ADMIN_NAME=Routely Admin
+SEED_ADMIN_EMAIL=admin@example.com
+SEED_ADMIN_PASSWORD=ReplaceWithLongMixedPassword1!
 ```
 
 `QR_SIGNING_SECRET` must be a separate server-only secret, not the JWT auth secret. Boarding validation accepts admin and trusted conductor accounts only. The default boarding window is 60 minutes before through 30 minutes after scheduled departure.
@@ -209,6 +212,8 @@ Start the backend development server:
 ```bash
 npm run dev
 ```
+
+Provision an administrator using `npm run seed:admin` after setting `SEED_ADMIN_NAME`, `SEED_ADMIN_EMAIL`, and a strong `SEED_ADMIN_PASSWORD` in `backend/.env`. The script never prints the password, refuses to promote an existing non-admin user, and leaves an existing admin account unchanged. Seed the Lagos–Ibadan demo route and trip with `npm run seed:demo`; production is refused unless `-- --force` is explicitly supplied. Stable demo keys make reruns leave existing records unchanged.
 
 The backend runs locally on:
 
@@ -390,6 +395,8 @@ Testing includes:
 - Responsive frontend testing
 
 Backend API endpoints can also be tested using Postman.
+
+Run the backend suite with `npm test` from `backend/`. Run frontend component tests with `npm test` from `frontend/`, and create a production bundle with `npm run build`. GitHub Actions runs backend tests and frontend tests/builds on Node.js 20 and 22.
 
 ---
 

@@ -111,3 +111,17 @@ Assess Phase 7 seat selection against existing reservation/expiry/refund seat ac
 ## Next
 
 Proceed to Phase 8 setup, CI and documentation cleanup. Phase 9's exact privacy wording and launch-video acceptance workflow remain unsupplied; do not invent them.
+
+## Phase 8: Seeds, Frontend Tests, and CI
+
+**Status:** Implemented on `feature/hardening-and-payments`; frontend unit test execution remains unverified locally because the package registry dependency download did not complete.
+
+**Changes:** Added a strong-environment-credential admin seed that hashes but never prints the password, refuses to promote non-admin accounts, and leaves existing admins unchanged. Added create-once, stable-key demo route/trip seeding with a production refusal unless `--force` is provided. Added model demo keys, Vitest/React Testing Library test/configuration, GitHub Actions for backend tests and frontend tests/build on Node 20 and 22, `.gitignore` coverage for coverage and `brag-output`, seed env examples, and README/API documentation updates. The documented GitHub clone URL matches the configured `origin`; a separate `personal` remote is retained without guessing which URL should be canonical.
+
+**Verification:** Backend Jest passed: 51 tests across 9 suites using `--transform='{}'`. Frontend production build passed. Seed required-env and production-refusal guards passed without database access. `git diff --check`, package JSON parsing, and Node syntax checks passed. Offline production dependency audits reported 0 vulnerabilities for both backend and frontend.
+
+**Could not verify:** `npm test` in `frontend` reports that `vitest` is not recognized. Installing Vitest/jsdom and regenerating the frontend lockfile failed because npm could not fetch uncached registry packages (`@babel/runtime` and `cssstyle`); the local package registry path remained unavailable. The CI workflow uses normal `npm install` and is expected to resolve the declared dependencies on GitHub Actions, but this was not executed in this environment. No live database seed was run.
+
+## Next
+
+Phase 9's exact privacy wording and launch-video workflow remain unsupplied. Keep those items unresolved rather than inventing acceptance criteria.

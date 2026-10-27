@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "seed:admin": "node scripts/seed-admin.js",
+    "seed:demo": "node scripts/seed-demo.js"
   },
   "dependencies": {
     "axios": "^1.20.0",

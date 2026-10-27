@@ -11,6 +11,7 @@ const tripSchema = new mongoose.Schema(
       rows: { type: Number, min: 1 },
       columns: { type: Number, min: 1 }
     },
+    demoKey: { type: String, sparse: true, unique: true },
     status: { type: String, enum: ['scheduled', 'completed', 'cancelled'], default: 'scheduled' }
   },
   { timestamps: true }

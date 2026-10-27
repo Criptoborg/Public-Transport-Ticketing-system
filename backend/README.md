@@ -31,6 +31,12 @@ BOARDING_WINDOW_AFTER_MINUTES=30
 
 `TRIP_REMINDER_INTERVAL_MINUTES` controls the reminder job scan interval (default 1 minute); eligible paid tickets are emailed once as they reach approximately three hours before departure.
 
+## Seed scripts
+
+`npm run seed:admin` requires `SEED_ADMIN_NAME`, `SEED_ADMIN_EMAIL`, and `SEED_ADMIN_PASSWORD`. The password must be at least 16 characters and include lowercase/uppercase letters, a number, and a symbol. It is hashed with bcrypt, never printed, and an existing non-admin account is never promoted.
+
+`npm run seed:demo` creates one marked Lagos–Ibadan route and trip using stable demo keys, leaving existing records untouched on reruns. It refuses to run when `NODE_ENV=production` unless explicitly invoked as `npm run seed:demo -- --force`. Keep the `.env.example` placeholders out of real credentials.
+
 4. Start development mode with `npm run dev`, or production mode with `npm start`.
 
 The API runs at `http://localhost:5000` by default. No backend files are required outside this `backend/` directory; the root `.gitignore` ignores dependencies and secrets.

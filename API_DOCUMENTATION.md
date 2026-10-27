@@ -495,7 +495,7 @@ Returns one trip with populated route information.
 
 ### POST `/api/trips`
 
-Creates a new trip.
+Creates a new trip. Optional `seatLayout: { "rows": 5, "columns": 8 }` enables assigned seats and requires `availableSeats` to equal the layout capacity.
 
 **Authentication:** Bearer token + Admin role
 
@@ -507,6 +507,7 @@ Creates a new trip.
   "departureTime": "2026-10-01T08:00:00.000Z",
   "arrivalTime": "2026-10-01T09:30:00.000Z",
   "availableSeats": 30,
+  "seatLayout": { "rows": 5, "columns": 6 },
   "status": "scheduled"
 }
 ```
@@ -527,7 +528,7 @@ Creates a new trip.
 
 ### PUT `/api/trips/:id`
 
-Updates a trip.
+Updates a trip. A seat layout cannot be resized to exclude or displace existing seat claims.
 
 **Authentication:** Bearer token + Admin role
 
