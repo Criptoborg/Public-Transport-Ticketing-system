@@ -29,6 +29,8 @@ BOARDING_WINDOW_AFTER_MINUTES=30
 
 `CANCEL_CUTOFF_HOURS` sets the minimum time before departure when a passenger may cancel; it defaults to 2 hours. `PAYSTACK_SECRET_KEY` is a backend-only Paystack test/live key and must never be exposed in frontend configuration. `PAYSTACK_CALLBACK_URL` defaults to `${FRONTEND_URL}/payment/callback`. `PENDING_TICKET_MINUTES` defaults to 15. Passwords must contain at least 8 characters, including a letter and a number.
 
+`TRIP_REMINDER_INTERVAL_MINUTES` controls the reminder job scan interval (default 1 minute); eligible paid tickets are emailed once as they reach approximately three hours before departure.
+
 4. Start development mode with `npm run dev`, or production mode with `npm start`.
 
 The API runs at `http://localhost:5000` by default. No backend files are required outside this `backend/` directory; the root `.gitignore` ignores dependencies and secrets.

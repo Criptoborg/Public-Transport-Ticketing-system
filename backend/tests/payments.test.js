@@ -66,6 +66,7 @@ beforeEach(async () => {
   process.env.QR_SIGNING_SECRET = 'separate-qr-test-secret';
   process.env.PAYSTACK_CALLBACK_URL = 'http://localhost:5173/payment/callback';
   process.env.PENDING_TICKET_MINUTES = '15';
+  process.env.TRIP_REMINDER_INTERVAL_MINUTES = '60';
   passenger = await User.create({ name: 'Test Passenger', email: 'passenger@example.com', password: 'hashed-password' });
   route = await Route.create({ origin: 'Lagos', destination: 'Ibadan', fare: 2500 });
   trip = await Trip.create({ route: route._id, departureTime: new Date(Date.now() + 8 * 60 * 60 * 1000), arrivalTime: new Date(Date.now() + 10 * 60 * 60 * 1000), availableSeats: 4, totalSeats: 4 });

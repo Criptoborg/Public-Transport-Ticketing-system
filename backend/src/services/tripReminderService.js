@@ -8,7 +8,10 @@ const runReminderJob = async () => {
   if (running) return 0;
   running = true;
   const now = new Date();
-  const reminderHorizon = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+  const configuredMinutes = Number(process.env.TRIP_REMINDER_INTERVAL_MINUTES || 1);
+  const intervalMinutes = Number.isFinite(configuredMinutes) && configuredMinutes >= 1 ? configuredMinutes : 1;
+  const reminderTarget = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+  const reminderWindowStart = new Date(reminderTarget.getTime() - intervalMinutes * 60 * 1000);
   const staleClaim = new Date(now.getTime() - 10 * 60 * 1000);
   let sentCount = 0;
   try {
@@ -19,7 +22,7 @@ const runReminderJob = async () => {
       $or: [{ reminderClaimedAt: { $exists: false } }, { reminderClaimedAt: { $lte: staleClaim } }]
     })
       .select('_id')
-      .populate({ path: 'trip', match: { departureTime: { $gt: now, $lte: reminderHorizon } }, select: 'departureTime route' })
+      .populate({ path: 'trip', match: { departureTime: { $gt: reminderWindowStart, $lte: reminderTarget } }, select: 'departureTime route' })
       .limit(500);
 
     for (const candidate of candidates) {
