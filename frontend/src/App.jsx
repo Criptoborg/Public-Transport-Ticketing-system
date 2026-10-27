@@ -7,6 +7,7 @@ import { AuthProvider } from "./context/AuthContext";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import Notice from "./components/common/Notice";
 import Landing from "./pages/public/Landing";
+import PaymentCallback from "./pages/public/PaymentCallback";
 import {
   Login,
   Register,
@@ -45,6 +46,7 @@ export default function App() {
               <Route path="/reset-password/:token" element={<ResetPassword />} />
               
               <Route element={<ProtectedRoute />}>
+                <Route path="/payment/callback" element={<PaymentCallback />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/trips" element={<Trips />} />
                 <Route path="/trips/:id" element={<TripDetails />} />

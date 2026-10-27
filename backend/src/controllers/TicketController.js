@@ -1,8 +1,11 @@
 const mongoose = require('mongoose');
 const Ticket = require('../models/Ticket');
 const Trip = require('../models/Trip');
+const crypto = require('crypto');
 const generateTicketReference = require('../utils/generateTicketReference');
 const getPagination = require('../utils/pagination');
+const PaymentService = require('../services/paymentService');
+const TicketLifecycle = require('../services/ticketLifecycle');
 
 const ticketDetails = (query) => Ticket.find(query)
   .populate('user', 'name email')
@@ -12,12 +15,14 @@ const ticketDetails = (query) => Ticket.find(query)
 const createTicket = async (req, res, next) => {
   try {
     const { trip: tripId } = req.body;
+    const quantity = req.body.quantity === undefined ? 1 : Number(req.body.quantity);
     if (!tripId) return res.status(400).json({ success: false, message: 'Trip is required', data: null });
     if (!mongoose.isValidObjectId(tripId)) return res.status(400).json({ success: false, message: 'Invalid trip ID', data: null });
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 5) return res.status(400).json({ success: false, message: 'Quantity must be an integer from 1 to 5', data: null });
 
     const trip = await Trip.findOneAndUpdate(
-      { _id: tripId, status: 'scheduled', departureTime: { $gt: new Date() }, availableSeats: { $gt: 0 } },
-      { $inc: { availableSeats: -1 } },
+      { _id: tripId, status: 'scheduled', departureTime: { $gt: new Date() }, availableSeats: { $gte: quantity } },
+      { $inc: { availableSeats: -quantity } },
       { new: true }
     ).populate('route');
 
@@ -30,37 +35,47 @@ const createTicket = async (req, res, next) => {
     }
 
     if (!trip.route) {
-      await Trip.updateOne({ _id: trip._id }, { $inc: { availableSeats: 1 } });
+      await Trip.updateOne({ _id: trip._id }, { $inc: { availableSeats: quantity } });
       return res.status(400).json({ success: false, message: 'Trip route not found', data: null });
     }
 
-    // The fare comes from the stored Route, never from a client-supplied amount.
-    let ticket;
+    const bookingId = crypto.randomUUID();
+    const reservedUntil = new Date(Date.now() + Math.max(1, Number(process.env.PENDING_TICKET_MINUTES) || 15) * 60 * 1000);
     try {
+      let tickets;
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
-          ticket = await Ticket.create({
+          tickets = await Ticket.insertMany(Array.from({ length: quantity }, () => ({
             user: req.user.id,
             trip: trip._id,
+            bookingId,
             ticketReference: generateTicketReference(),
-            amount: trip.route.fare
-          });
+            amount: trip.route.fare,
+            status: 'pending',
+            paymentStatus: 'unpaid',
+            reservedUntil
+          })));
           break;
         } catch (error) {
           if (error.code !== 11000 || attempt === 2) throw error;
+          await Ticket.deleteMany({ bookingId });
         }
       }
+      return res.status(201).json({
+        success: true,
+        message: 'Booking reserved. Complete payment to activate your tickets.',
+        data: { bookingId, tickets: await ticketDetails({ _id: { $in: tickets.map((ticket) => ticket._id) } }) }
+      });
     } catch (error) {
-      await Trip.updateOne({ _id: trip._id }, { $inc: { availableSeats: 1 } });
+      await Trip.updateOne({ _id: trip._id }, { $inc: { availableSeats: quantity } });
       throw error;
     }
-
-    res.status(201).json({ success: true, message: 'Ticket created successfully', data: await ticketDetails({ _id: ticket._id }).then((items) => items[0]) });
   } catch (error) { next(error); }
 };
 
 const getMyTickets = async (req, res, next) => {
   try {
+    await PaymentService.expirePendingTickets({ userId: req.user.id });
     const filter = { user: req.user.id };
     const { page, limit, skip } = getPagination(req.query);
     const [tickets, total] = await Promise.all([
@@ -85,45 +100,13 @@ const getTicket = async (req, res, next) => {
 const cancelTicket = async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid ticket ID', data: null });
-
-    const existingTicket = await Ticket.findById(req.params.id).select('user trip status');
-    if (!existingTicket) return res.status(404).json({ success: false, message: 'Ticket not found', data: null });
-    if (req.user.role !== 'admin' && existingTicket.user.toString() !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'You can only cancel your own tickets', data: null });
-    }
-    if (existingTicket.status !== 'active') return res.status(400).json({ success: false, message: 'Only active tickets can be cancelled', data: null });
-
-    const trip = await Trip.findById(existingTicket.trip).select('status departureTime availableSeats totalSeats');
-    if (!trip) return res.status(409).json({ success: false, message: 'The ticket trip is no longer available', data: null });
-    const now = new Date();
-    if (trip.departureTime <= now) return res.status(400).json({ success: false, message: 'Tickets cannot be cancelled after departure', data: null });
-    const configuredCutoffHours = Number(process.env.CANCEL_CUTOFF_HOURS || 2);
-    const cutoffHours = Number.isFinite(configuredCutoffHours) && configuredCutoffHours >= 0 ? configuredCutoffHours : 2;
-    const cutoff = new Date(trip.departureTime.getTime() - cutoffHours * 60 * 60 * 1000);
-    if (now >= cutoff) return res.status(400).json({ success: false, message: `Tickets cannot be cancelled within ${cutoffHours} hours of departure`, data: null });
-
-    const ticket = await Ticket.findOneAndUpdate(
-      { _id: req.params.id, status: 'active', ...(req.user.role === 'admin' ? {} : { user: req.user.id }) },
-      { status: 'cancelled' },
-      { new: true }
-    );
-    if (!ticket) return res.status(400).json({ success: false, message: 'Only active tickets can be cancelled', data: null });
-
-    if (trip.status !== 'cancelled') {
-      const historicalTickets = await Ticket.countDocuments({ trip: trip._id });
-      const totalSeats = trip.totalSeats ?? trip.availableSeats + historicalTickets;
-      try {
-        await Trip.updateOne(
-          { _id: trip._id, availableSeats: { $lt: totalSeats } },
-          { $inc: { availableSeats: 1 }, $set: { totalSeats } }
-        );
-      } catch (error) {
-        await Ticket.updateOne({ _id: ticket._id, status: 'cancelled' }, { status: 'active' });
-        throw error;
-      }
-    }
-
-    res.json({ success: true, message: 'Ticket cancelled successfully', data: await ticketDetails({ _id: ticket._id }).then((items) => items[0]) });
+    const result = await TicketLifecycle.cancelTicket({
+      ticketId: req.params.id,
+      userId: req.user.id,
+      isAdmin: req.user.role === 'admin'
+    });
+    if (result.status !== 200) return res.status(result.status).json({ success: false, message: result.message, data: null });
+    res.json({ success: true, message: result.message, data: await ticketDetails({ _id: result.ticket._id }).then((items) => items[0]) });
   } catch (error) { next(error); }
 };
 

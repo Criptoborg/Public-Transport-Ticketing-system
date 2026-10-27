@@ -22,6 +22,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 }));
+app.post('/api/payments/webhook', express.raw({ type: 'application/json', limit: '32kb' }), require('./controllers/PaymentController').webhook);
 app.use(express.json({ limit: '32kb' }));
 
 app.use('/api', rateLimit({
@@ -59,6 +60,7 @@ app.use('/api/auth', require('./routes/AuthRoutes'));
 app.use('/api/routes', require('./routes/RouteRoutes'));
 app.use('/api/trips', require('./routes/TripRoutes'));
 app.use('/api/tickets', require('./routes/TicketRoutes'));
+app.use('/api/payments', require('./routes/PaymentRoutes'));
 app.use('/api/admin', require('./routes/AdminRoutes'));
 
 app.use((req, res) => {
@@ -70,9 +72,11 @@ const PORT = process.env.PORT || 5000;
 
 if (require.main === module) {
   connectDB().then(() => {
+    require('./services/paymentService').startExpiryJob();
     const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
     process.once('SIGTERM', () => {
       server.close(async () => {
+        require('./services/paymentService').stopExpiryJob();
         await mongoose.disconnect();
         process.exit(0);
       });

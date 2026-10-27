@@ -25,4 +25,25 @@ const sendPasswordResetEmail = (user, resetUrl) => sendEmail({
   text: `Hello ${user.name},\n\nUse this link to reset your Routely password: ${resetUrl}\n\nThis link expires in 15 minutes. If you did not request a password reset, you can ignore this email.`
 });
 
-module.exports = { sendWelcomeEmail, sendPasswordResetEmail };
+const sendBookingConfirmation = async (tickets, totalAmount) => {
+  const firstTicket = tickets[0];
+  if (!firstTicket?.user?.email) return;
+  const route = firstTicket.trip?.route;
+  const travelTime = firstTicket.trip?.departureTime
+    ? new Date(firstTicket.trip.departureTime).toLocaleString()
+    : 'as scheduled';
+  const references = tickets.map((ticket) => ticket.ticketReference).join(', ');
+  await sendEmail({
+    to: firstTicket.user.email,
+    subject: 'Your Routely tickets are confirmed',
+    text: `Hello ${firstTicket.user.name},\n\nPayment is confirmed for ${route?.origin || 'your origin'} to ${route?.destination || 'your destination'} on ${travelTime}.\nTicket references: ${references}\nAmount paid: ₦${Number(totalAmount).toLocaleString()}.\n\nThank you for travelling with Routely.`
+  });
+};
+
+const sendRefundNotification = (user, ticket) => sendEmail({
+  to: user.email,
+  subject: 'Routely refund initiated',
+  text: `Hello ${user.name},\n\nA refund has been initiated for ticket ${ticket.ticketReference}, amount ₦${Number(ticket.amount).toLocaleString()}. Your bank or card provider may take additional time to post it.`
+});
+
+module.exports = { sendWelcomeEmail, sendPasswordResetEmail, sendBookingConfirmation, sendRefundNotification };

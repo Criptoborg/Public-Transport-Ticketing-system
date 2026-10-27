@@ -1168,3 +1168,31 @@ html {
   animation: skeleton-loading 1.5s infinite;
   border-radius: 3px;
 }
+.payment-status,
+.reservation-countdown {
+  color: #475569;
+  font-size: 0.78rem;
+}
+.reservation-countdown {
+  font-variant-numeric: tabular-nums;
+}
+.quantity-field {
+  max-width: 180px;
+  margin-bottom: 16px;
+}
+.price-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+  margin-bottom: 12px;
+  color: var(--muted);
+}
+.price-summary strong {
+  color: var(--ink);
+  font: 700 1.5rem "Space Grotesk", sans-serif;
+}
+.payment-result {
+  min-height: 55vh;
+}

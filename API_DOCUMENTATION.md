@@ -236,6 +236,28 @@ Resets a password using the token received through the reset link.
 
 - `400` — missing token/password, password too short, or invalid/expired token.
 
+## Payments
+
+Paystack hosted checkout is used for payment. Card details are entered only on Paystack. The backend secret is configured with `PAYSTACK_SECRET_KEY` and is never returned to the frontend.
+
+### POST `/api/tickets/createticket`
+
+Reserves seats and creates pending ticket records. Body: `{ "trip": "TRIP_ID", "quantity": 1 }`; quantity is optional and must be 1–5. The response data includes `bookingId` and the created `tickets` array. The booking must be paid before `reservedUntil`.
+
+### POST `/api/payments/initialize`
+
+Requires authentication. Body: `{ "ticketId": "TICKET_ID" }` or `{ "bookingId": "BOOKING_ID" }`. The server calculates the NGN amount from the stored trip fare and returns `{ "authorizationUrl", "reference" }` for redirect to Paystack-hosted checkout.
+
+### GET `/api/payments/verify/:reference`
+
+Requires authentication and verifies the transaction with Paystack. Only a successful NGN payment matching the expected kobo amount activates the booking. Repeated verification is idempotent.
+
+### POST `/api/payments/webhook`
+
+Public Paystack webhook. Configure this URL in Paystack: `https://YOUR_API_HOST/api/payments/webhook`. Requests are authenticated with `x-paystack-signature` HMAC-SHA512 over the raw JSON body. Invalid signatures receive 401.
+
+Pending tickets expire after `PENDING_TICKET_MINUTES` (default 15); held seats are released once. A paid cancellation starts a refund. `refund_failed` tickets need admin follow-up.
+
 ---
 
 # Routes

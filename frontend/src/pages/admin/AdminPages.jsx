@@ -531,7 +531,7 @@ export function AdminTickets() {
               <div>
                 <strong>{ticket.ticketReference}</strong>
                 <span>
-                  {ticket.user?.name} · {ticket.trip?.route?.origin} → {ticket.trip?.route?.destination} · {money(ticket.amount)}
+                  {ticket.user?.name} · {ticket.trip?.route?.origin} → {ticket.trip?.route?.destination} · {money(ticket.amount)} · Payment: {ticket.paymentStatus || "paid"}
                 </span>
               </div>
               <select

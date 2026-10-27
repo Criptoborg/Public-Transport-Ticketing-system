@@ -31,3 +31,19 @@ Provide Phases 2–9, including the exact Phase 9 item 6 privacy requirement, to
 ## Next
 
 Continue with Phase 3 from the supplied phase brief. Phases 3–9, the exact Phase 9 item 6 privacy requirement, and the launch-video workflow are still needed before implementing later scope.
+
+## Phase 3: Paystack Payments
+
+**Status:** Implemented on `feature/hardening-and-payments`; ready to commit.
+
+**Changes:** Added pending/payment/refund ticket fields, shared booking IDs, unique payment attempts, quantity reservations, hosted Paystack initialization, server-side NGN/kobo verification, raw-body HMAC webhook verification, idempotent settlement, transactional expiry/seat release, refund transitions, confirmation/refund email templates, migration for existing tickets, authenticated callback and payment-resume UI, countdowns and admin-visible payment status. Late successful charges after expiry/cancellation are recorded and sent to refund instead of activating tickets. Paystack access remains server-side.
+
+**Files touched:** Root/API/backend documentation, backend env/package files, ticket/payment models, payment/ticket/admin/trip controllers, payment/ticket lifecycle/email/refund services, routes, migration script, payment tests, and frontend app/payment callback/passenger/admin/styles.
+
+**Verification:** Backend Jest passed: 34 tests across 7 suites, including 10 Paystack lifecycle tests using mocked provider HTTP calls and `mongodb-memory-server` replica-set transactions. Frontend `npm run build` passed with no warnings. Backend JavaScript syntax checks passed. `npm audit --omit=dev --offline` reported 0 vulnerabilities.
+
+**Could not verify:** No Paystack test or live secret was provided, so real hosted checkout, provider-side webhook delivery, and actual refund settlement were not exercised. Resend credentials and database migration against production were also not exercised. Configure `PAYSTACK_SECRET_KEY`, the callback URL, and webhook URL in the deployment environment; run and verify the legacy-ticket migration after taking a database backup.
+
+## Next
+
+Provide Phases 4–9, including the exact Phase 9 item 6 privacy rule, to continue. The launch-video workflow remains unspecified and is not produced yet.

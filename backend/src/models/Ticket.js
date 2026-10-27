@@ -4,9 +4,15 @@ const ticketSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     trip: { type: mongoose.Schema.Types.ObjectId, ref: 'Trip', required: true },
+    bookingId: { type: String, required: true, index: true },
     ticketReference: { type: String, required: true, unique: true },
     amount: { type: Number, required: true, min: 0 },
-    status: { type: String, enum: ['active', 'used', 'cancelled'], default: 'active' },
+    status: { type: String, enum: ['pending', 'active', 'used', 'cancelled', 'expired'], default: 'pending' },
+    paymentReference: { type: String, unique: true, sparse: true },
+    paymentStatus: { type: String, enum: ['unpaid', 'paid', 'refunded', 'refund_pending', 'refund_failed'], default: 'unpaid' },
+    paidAt: Date,
+    reservedUntil: Date,
+    refundedAt: Date,
     purchaseDate: { type: Date, default: Date.now }
   },
   { timestamps: true }
@@ -14,5 +20,6 @@ const ticketSchema = new mongoose.Schema(
 
 ticketSchema.index({ user: 1, createdAt: -1 });
 ticketSchema.index({ trip: 1 });
+ticketSchema.index({ status: 1, reservedUntil: 1 });
 
 module.exports = mongoose.model('Ticket', ticketSchema);

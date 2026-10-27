@@ -192,9 +192,12 @@ OPENROUTESERVICE_API_KEY=your_openrouteservice_api_key
 BASE_FARE=300
 FARE_PER_KM=70
 CANCEL_CUTOFF_HOURS=2
+PAYSTACK_SECRET_KEY=sk_test_replace_with_paystack_test_secret
+PAYSTACK_CALLBACK_URL=http://localhost:5173/payment/callback
+PENDING_TICKET_MINUTES=15
 ```
 
-`CANCEL_CUTOFF_HOURS` sets the minimum time before departure when a ticket may be cancelled; it defaults to 2 hours. Passwords must contain at least 8 characters, including a letter and a number.
+`PAYSTACK_SECRET_KEY` is a backend-only secret and must never be added to frontend variables. `PAYSTACK_CALLBACK_URL` is the hosted checkout return URL; `PENDING_TICKET_MINUTES` defaults to 15. Before enabling payments for existing data, run `node scripts/migrate-existing-tickets.js` from `backend/` after backing up the database.
 
 Start the backend development server:
 

@@ -1,6 +1,6 @@
 # Routely API
 
-A simple Node.js, Express, MongoDB and Mongoose backend for the Public Transport Ticketing System MVP. Ticket creation represents a booking only; there is no real payment gateway.
+A Node.js, Express, MongoDB and Mongoose backend for Routely.
 
 ## Setup
 
@@ -19,15 +19,26 @@ OPENROUTESERVICE_API_KEY=your_openrouteservice_api_key
 BASE_FARE=300
 FARE_PER_KM=70
 CANCEL_CUTOFF_HOURS=2
+PAYSTACK_SECRET_KEY=sk_test_replace_with_paystack_test_secret
+PAYSTACK_CALLBACK_URL=http://localhost:5173/payment/callback
+PENDING_TICKET_MINUTES=15
 ```
 
-`CANCEL_CUTOFF_HOURS` sets the minimum time before departure when a ticket may be cancelled; it defaults to 2 hours. Passwords must contain at least 8 characters, including a letter and a number.
+`CANCEL_CUTOFF_HOURS` sets the minimum time before departure when a passenger may cancel; it defaults to 2 hours. `PAYSTACK_SECRET_KEY` is a backend-only Paystack test/live key and must never be exposed in frontend configuration. `PAYSTACK_CALLBACK_URL` defaults to `${FRONTEND_URL}/payment/callback`. `PENDING_TICKET_MINUTES` defaults to 15. Passwords must contain at least 8 characters, including a letter and a number.
 
 4. Start development mode with `npm run dev`, or production mode with `npm start`.
 
 The API runs at `http://localhost:5000` by default. No backend files are required outside this `backend/` directory; the root `.gitignore` ignores dependencies and secrets.
 
 In production, set `FRONTEND_URL` to the allowed frontend origin(s), separated by commas if needed. Development additionally permits `http://localhost:5173`. API lists accept `page` and `limit` (default 1 and 20, limit capped at 100) and return pagination details in `meta` while keeping the result array in `data`.
+
+## Paystack payments and legacy tickets
+
+Bookings reserve seats and create pending tickets. Passengers are redirected to Paystack-hosted checkout; Routely never collects card details. A successful verify response or a valid signed webhook activates tickets. Pending reservations expire after `PENDING_TICKET_MINUTES`, releasing held seats. Configure Paystack's webhook URL as `https://YOUR_API_HOST/api/payments/webhook` using the secret key for the same Paystack environment.
+
+Before enabling payments on an existing database, run `node scripts/migrate-existing-tickets.js` from this directory. The script marks existing tickets paid and assigns each a legacy booking ID. Back up the database before migration.
+
+Eligible cancellations initiate partial refunds per ticket for multi-ticket bookings. Provider acceptance marks tickets `refunded`; failures are saved as `refund_failed` for admin follow-up. Bank/card posting times depend on Paystack and the provider.
 
 ## Authentication
 

@@ -120,7 +120,7 @@ export function Dashboard() {
   );
 }
 
-function TicketCard({ ticket, onCancel }) {
+function TicketCard({ ticket, onCancel, onPay, paying = false }) {
   const route = ticket.trip?.route;
   return (
     <article className="ticket-card">
@@ -138,7 +138,14 @@ function TicketCard({ ticket, onCancel }) {
       <div className="ticket-side">
         <strong>{money(ticket.amount)}</strong>
         <StatusBadge value={ticket.status} />
-        {ticket.status === "active" && onCancel && (
+        {ticket.paymentStatus && <span className="payment-status">Payment: {ticket.paymentStatus.replaceAll("_", " ")}</span>}
+        {ticket.status === "pending" && <ReservationCountdown until={ticket.reservedUntil} />}
+        {ticket.status === "pending" && onPay && (
+          <button type="button" className="button button-primary" disabled={paying} onClick={() => onPay(ticket)}>
+            {paying ? "Opening checkout..." : "Pay now"}
+          </button>
+        )}
+        {ticket.status === 'active' && ticket.paymentStatus === 'paid' && onCancel && (
           <button
             type="button"
             className="button button-quiet"
@@ -150,6 +157,17 @@ function TicketCard({ ticket, onCancel }) {
       </div>
     </article>
   );
+}
+
+function ReservationCountdown({ until }) {
+  const [remaining, setRemaining] = useState(() => Math.max(0, new Date(until).getTime() - Date.now()));
+  useEffect(() => {
+    const timer = window.setInterval(() => setRemaining(Math.max(0, new Date(until).getTime() - Date.now())), 1000);
+    return () => window.clearInterval(timer);
+  }, [until]);
+  const minutes = Math.floor(remaining / 60000);
+  const seconds = Math.floor((remaining % 60000) / 1000).toString().padStart(2, "0");
+  return <span className="reservation-countdown" role="timer">{remaining ? `Reserved for ${minutes}:${seconds}` : "Reservation expired"}</span>;
 }
 
 export function Trips() {
@@ -262,6 +280,8 @@ export function TripDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [trip, setTrip] = useState(null);
+  const [quantity, setQuantity] = useState(1);
+  const [bookingId, setBookingId] = useState(null);
   const [state, setState] = useState({
     loading: true,
     booking: false,
@@ -275,14 +295,17 @@ export function TripDetails() {
       .catch((err) => setState((current) => ({ ...current, error: apiError(err) })))
       .finally(() => setState((current) => ({ ...current, loading: false })));
   }, [id]);
-  const book = async () => {
+  const startPayment = async (existingBookingId = bookingId) => {
     setState((current) => ({ ...current, booking: true, error: "", success: "" }));
     try {
-      const data = unwrap(
-        await api.post("/api/tickets/createticket", { trip: id }),
-      );
-      setState((current) => ({ ...current, booking: false, success: data.message }));
-      setTimeout(() => navigate("/tickets"), 1000);
+      let resolvedBookingId = existingBookingId;
+      if (!resolvedBookingId) {
+        const bookingResponse = unwrap(await api.post("/api/tickets/createticket", { trip: id, quantity }));
+        resolvedBookingId = bookingResponse.data.bookingId;
+        setBookingId(resolvedBookingId);
+      }
+      const payment = unwrap(await api.post("/api/payments/initialize", { bookingId: resolvedBookingId }));
+      window.location.assign(payment.data.authorizationUrl);
     } catch (error) {
       setState((current) => ({ ...current, booking: false, error: apiError(error) }));
     }
@@ -335,6 +358,18 @@ export function TripDetails() {
             <strong className="fare">{money(route.fare)}</strong>
           </div>
         </div>
+        <label className="field quantity-field">
+          <span>Tickets</span>
+          <select value={quantity} onChange={(event) => setQuantity(Number(event.target.value))}>
+            {Array.from({ length: Math.min(5, trip.availableSeats) }, (_, index) => index + 1).map((count) => (
+              <option value={count} key={count}>{count}</option>
+            ))}
+          </select>
+        </label>
+        <div className="price-summary">
+          <span>{money(route.fare)} × {quantity}</span>
+          <strong>{money(Number(route.fare) * quantity)}</strong>
+        </div>
         <button
           type="button"
           className="button button-primary wide"
@@ -343,10 +378,11 @@ export function TripDetails() {
             trip.status !== "scheduled" ||
             trip.availableSeats < 1
           }
-          onClick={book}
+          onClick={() => startPayment()}
         >
-          {state.booking ? "Booking ticket..." : "Book this trip"}
+          {state.booking ? "Preparing secure checkout..." : "Continue to secure payment"}
         </button>
+        {bookingId && !state.booking && <button type="button" className="button button-quiet wide" onClick={() => startPayment(bookingId)}>Resume payment</button>}
       </div>
     </main>
   );
@@ -357,6 +393,7 @@ export function Tickets() {
   const [state, setState] = useState({ loading: true, error: "" });
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
+  const [payingId, setPayingId] = useState(null);
   const load = (currentPage = page) =>
     api
       .get("/api/tickets/my-tickets", { params: { page: currentPage, limit: 20 } })
@@ -379,6 +416,17 @@ export function Tickets() {
       setState((current) => ({ ...current, error: apiError(error) }));
     }
   };
+  const pay = async (ticket) => {
+    setPayingId(ticket._id);
+    setState((current) => ({ ...current, error: "" }));
+    try {
+      const payment = unwrap(await api.post("/api/payments/initialize", { ticketId: ticket._id }));
+      window.location.assign(payment.data.authorizationUrl);
+    } catch (error) {
+      setState((current) => ({ ...current, error: apiError(error) }));
+      setPayingId(null);
+    }
+  };
   return (
     <main className="page-shell">
       <PageTitle eyebrow="YOUR WALLET" title="My tickets">
@@ -391,8 +439,8 @@ export function Tickets() {
         <LoadingState label="Loading tickets..." />
       ) : tickets.length ? (
         <div className="ticket-list">
-          {tickets.map((ticket) => (
-            <TicketCard ticket={ticket} onCancel={cancel} key={ticket._id} />
+            {tickets.map((ticket) => (
+            <TicketCard ticket={ticket} onCancel={cancel} onPay={pay} paying={payingId === ticket._id} key={ticket._id} />
           ))}
         </div>
       ) : (
