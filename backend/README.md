@@ -158,6 +158,9 @@ Routes with the existing explicit `fare` shape remain supported. When coordinate
 | DELETE | `/api/trips/:id` | Admin | Delete a trip. |
 
 Dates must be valid date strings, for example `2026-10-01T08:00:00.000Z`.
+Trip reads accept `origin`, `destination`, `date` (a UTC calendar day) or `from`/`to`, `minSeats`, and `sort=departure|price`, in addition to status/route and pagination. Trips with a seat layout return `seatMap` from `GET /api/trips/:id`; bookings must submit exactly `quantity` unique seat IDs in `seats`.
+
+Optional `seatLayout: { "rows", "columns" }` enables assigned seats; capacity is rows × columns.
 
 ## Trip reminders
 

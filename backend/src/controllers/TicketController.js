@@ -21,6 +21,70 @@ const createTicket = async (req, res, next) => {
     if (!mongoose.isValidObjectId(tripId)) return res.status(400).json({ success: false, message: 'Invalid trip ID', data: null });
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 5) return res.status(400).json({ success: false, message: 'Quantity must be an integer from 1 to 5', data: null });
 
+    const mappedTrip = await Trip.findById(tripId).select('seatLayout');
+    if (mappedTrip?.seatLayout?.rows && mappedTrip?.seatLayout?.columns) {
+      const { rows, columns } = mappedTrip.seatLayout;
+      const selectedSeats = req.body.seats;
+      if (!Array.isArray(selectedSeats) || selectedSeats.length !== quantity || new Set(selectedSeats).size !== quantity) {
+        return res.status(400).json({ success: false, message: 'Select exactly one unique seat per ticket', data: null });
+      }
+      const validSeat = (seat) => {
+        if (typeof seat !== 'string') return false;
+        const match = seat.match(/^([1-9]\d*)([A-Z])$/);
+        if (!match) return false;
+        const row = Number(match[1]);
+        const column = match[2].charCodeAt(0) - 64;
+        return row <= rows && column <= columns;
+      };
+      if (!selectedSeats.every(validSeat)) return res.status(400).json({ success: false, message: 'One or more selected seats are invalid', data: null });
+
+      const session = await mongoose.startSession();
+      const bookingId = crypto.randomUUID();
+      const reservedUntil = new Date(Date.now() + Math.max(1, Number(process.env.PENDING_TICKET_MINUTES) || 15) * 60 * 1000);
+      let tickets = [];
+      try {
+        await session.withTransaction(async () => {
+          const trip = await Trip.findOneAndUpdate(
+            { _id: tripId, status: 'scheduled', departureTime: { $gt: new Date() }, availableSeats: { $gte: quantity } },
+            { $inc: { availableSeats: -quantity } },
+            { new: true, session }
+          ).populate('route');
+          if (!trip) throw Object.assign(new Error('Trip is not available for booking'), { code: 'TRIP_UNAVAILABLE' });
+          if (!trip.route) throw Object.assign(new Error('Trip route not found'), { code: 'TRIP_ROUTE_MISSING' });
+          tickets = await Ticket.insertMany(selectedSeats.map((seatNumber) => ({
+            user: req.user.id,
+            trip: trip._id,
+            seatNumber,
+            bookingId,
+            ticketReference: generateTicketReference(),
+            amount: trip.route.fare,
+            status: 'pending',
+            paymentStatus: 'unpaid',
+            reservedUntil
+          })), { session });
+        });
+      } catch (error) {
+        if (error.code === 11000) return res.status(409).json({ success: false, message: 'One or more selected seats are no longer available', data: null });
+        if (error.code === 'TRIP_UNAVAILABLE') {
+          const existingTrip = await Trip.findById(tripId).select('status availableSeats departureTime');
+          if (!existingTrip) return res.status(404).json({ success: false, message: 'Trip not found', data: null });
+          if (existingTrip.status !== 'scheduled') return res.status(400).json({ success: false, message: 'Only scheduled trips can be booked', data: null });
+          if (existingTrip.departureTime <= new Date()) return res.status(400).json({ success: false, message: 'Trips that have already departed cannot be booked', data: null });
+          return res.status(400).json({ success: false, message: 'No seats are available for this trip', data: null });
+        }
+        if (error.code === 'TRIP_ROUTE_MISSING') return res.status(400).json({ success: false, message: error.message, data: null });
+        throw error;
+      } finally {
+        await session.endSession();
+      }
+      return res.status(201).json({
+        success: true,
+        message: 'Booking reserved. Complete payment to activate your tickets.',
+        data: { bookingId, tickets: await ticketDetails({ _id: { $in: tickets.map((ticket) => ticket._id) } }) }
+      });
+    }
+    if (req.body.seats !== undefined) return res.status(400).json({ success: false, message: 'This trip does not support assigned seats', data: null });
+
     const trip = await Trip.findOneAndUpdate(
       { _id: tripId, status: 'scheduled', departureTime: { $gt: new Date() }, availableSeats: { $gte: quantity } },
       { $inc: { availableSeats: -quantity } },

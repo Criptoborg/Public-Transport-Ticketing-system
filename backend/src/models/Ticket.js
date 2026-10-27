@@ -4,6 +4,7 @@ const ticketSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     trip: { type: mongoose.Schema.Types.ObjectId, ref: 'Trip', required: true },
+    seatNumber: { type: String },
     bookingId: { type: String, required: true, index: true },
     ticketReference: { type: String, required: true, unique: true },
     amount: { type: Number, required: true, min: 0 },
@@ -26,5 +27,9 @@ const ticketSchema = new mongoose.Schema(
 ticketSchema.index({ user: 1, createdAt: -1 });
 ticketSchema.index({ trip: 1 });
 ticketSchema.index({ status: 1, reservedUntil: 1 });
+ticketSchema.index(
+  { trip: 1, seatNumber: 1 },
+  { unique: true, partialFilterExpression: { seatNumber: { $type: 'string' }, status: { $in: ['pending', 'active', 'used'] } } }
+);
 
 module.exports = mongoose.model('Ticket', ticketSchema);

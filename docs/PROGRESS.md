@@ -95,3 +95,19 @@ Provide Phases 6–9, including the exact Phase 9 item 6 privacy rule. Launch-vi
 ## Next
 
 Assess Phase 7 seat selection against existing reservation/expiry/refund seat accounting. Continue to Phase 8 only after Phase 7 is implemented safely or explicitly skipped with rationale.
+
+## Phase 7: Optional Assigned Seats
+
+**Status:** Implemented on `feature/hardening-and-payments`; validated and ready to commit.
+
+**Changes:** Added optional seat layouts to trips, seat numbers to tickets, a partial unique index for pending/active/used claims, atomic transaction-backed seat selection, occupied-seat details, passenger selection grid, and admin layout controls. Trip creation enforces layout capacity; layout changes reject any resize that excludes live claims or conflicts with existing unassigned bookings. Trips without a configured map retain quantity booking. Cancelled and expired tickets release their seats through the existing lifecycle status transitions.
+
+**Files touched:** `backend/src/controllers/TicketController.js`, `backend/src/controllers/TripController.js`, ticket/trip models, payment/seat integration tests, passenger/admin pages, frontend styles, API/backend docs, and this report.
+
+**Verification:** Focused payment/seat suite passed 19 tests. Full backend Jest suite passed 51 tests across 9 suites using `--transform='{}'` because the default transform has a known local `caniuse-lite` issue. Frontend `npm run build` passed. Editor diagnostics reported no errors.
+
+**Decisions / remaining:** Seat IDs use row numbers and uppercase column letters (for example `1A`); current admin controls cap layouts at 30 rows and 12 columns. Live Paystack checkout and concurrent requests against a production MongoDB cluster were not exercised; transaction and collision behavior was tested with the replica-set test database. Optional seat maps do not force a migration of existing trips.
+
+## Next
+
+Proceed to Phase 8 setup, CI and documentation cleanup. Phase 9's exact privacy wording and launch-video acceptance workflow remain unsupplied; do not invent them.

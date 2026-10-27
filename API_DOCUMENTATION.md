@@ -464,6 +464,8 @@ Returns trips ordered by departure time.
 - `minSeats` — minimum available seats.
 - `sort` — `departure` (default) or `price`.
 
+If the trip has an optional seat layout, the response also includes `seatMap: { rows, columns, occupiedSeats }`. Booking such a trip requires a `seats` array with exactly one unique valid seat number per requested quantity; occupied seats return a conflict and are not reserved twice.
+
 **Example**
 
 ```text

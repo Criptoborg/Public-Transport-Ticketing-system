@@ -17,6 +17,7 @@ const Route = require('../src/models/Route');
 const User = require('../src/models/User');
 const PaymentAttempt = require('../src/models/PaymentAttempt');
 const TicketController = require('../src/controllers/TicketController');
+const TripController = require('../src/controllers/TripController');
 const PaymentService = require('../src/services/paymentService');
 const QrTicketService = require('../src/services/qrTicketService');
 const TripReminderService = require('../src/services/tripReminderService');
@@ -111,6 +112,57 @@ describe('Paystack ticket lifecycle', () => {
     expect(response.body.data.tickets).toHaveLength(3);
     expect(new Set(response.body.data.tickets.map((ticket) => ticket.bookingId))).toEqual(new Set([response.body.data.bookingId]));
     expect(await Trip.findById(trip._id).select('availableSeats').lean()).toMatchObject({ availableSeats: 1 });
+  });
+
+  test('seat-map booking requires one unique seat per ticket and reserves selected seats atomically', async () => {
+    await Trip.updateOne({ _id: trip._id }, { seatLayout: { rows: 2, columns: 2 }, availableSeats: 4, totalSeats: 4 });
+    const invalid = await makeRequest(TicketController.createTicket, { body: { trip: trip._id.toString(), quantity: 2, seats: ['1A'] }, user: { id: passenger._id.toString(), role: 'passenger' } });
+    expect(invalid.status).toBe(400);
+
+    const booked = await makeRequest(TicketController.createTicket, { body: { trip: trip._id.toString(), quantity: 2, seats: ['1A', '1B'] }, user: { id: passenger._id.toString(), role: 'passenger' } });
+    expect(booked.status).toBe(201);
+    expect(booked.body.data.tickets.map((ticket) => ticket.seatNumber).sort()).toEqual(['1A', '1B']);
+    expect((await Trip.findById(trip._id)).availableSeats).toBe(2);
+
+    const duplicate = await makeRequest(TicketController.createTicket, { body: { trip: trip._id.toString(), quantity: 1, seats: ['1A'] }, user: { id: passenger._id.toString(), role: 'passenger' } });
+    expect(duplicate.status).toBe(409);
+    expect((await Trip.findById(trip._id)).availableSeats).toBe(2);
+  });
+
+  test('cancelled seat-map tickets free their seat for reuse', async () => {
+    await Trip.updateOne({ _id: trip._id }, { seatLayout: { rows: 1, columns: 2 }, availableSeats: 2, totalSeats: 2 });
+    const booking = await makeRequest(TicketController.createTicket, { body: { trip: trip._id.toString(), quantity: 1, seats: ['1A'] }, user: { id: passenger._id.toString(), role: 'passenger' } });
+    const created = booking.body.data.tickets[0];
+    await Ticket.updateOne({ _id: created._id }, { status: 'active', paymentStatus: 'paid' });
+    const cancelled = await require('../src/services/ticketLifecycle').cancelTicket({ ticketId: created._id.toString(), userId: passenger._id.toString(), isAdmin: true });
+    expect(cancelled.status).toBe(200);
+
+    const nextBooking = await makeRequest(TicketController.createTicket, { body: { trip: trip._id.toString(), quantity: 1, seats: ['1A'] }, user: { id: passenger._id.toString(), role: 'passenger' } });
+    expect(nextBooking.status).toBe(201);
+    expect(nextBooking.body.data.tickets[0].seatNumber).toBe('1A');
+  });
+
+  test('trip layout creation sets matching capacity and shrinking past a live claim is rejected', async () => {
+    const created = await makeRequest(TripController.createTrip, {
+      body: {
+        route: route._id.toString(),
+        departureTime: new Date(Date.now() + 8 * 60 * 60 * 1000),
+        arrivalTime: new Date(Date.now() + 10 * 60 * 60 * 1000),
+        availableSeats: 4,
+        seatLayout: { rows: 2, columns: 2 }
+      }
+    });
+    expect(created.status).toBe(201);
+    expect(created.body.data).toMatchObject({ totalSeats: 4, availableSeats: 4, seatLayout: { rows: 2, columns: 2 } });
+
+    const mappedTrip = created.body.data;
+    await Ticket.create({ user: passenger._id, trip: mappedTrip._id, seatNumber: '2B', bookingId: crypto.randomUUID(), ticketReference: 'TST-CLAIM-0001', amount: route.fare, status: 'pending', paymentStatus: 'unpaid' });
+    const rejected = await makeRequest(TripController.updateTrip, {
+      params: { id: mappedTrip._id.toString() },
+      body: { seatLayout: { rows: 1, columns: 1 } }
+    });
+    expect(rejected.status).toBe(409);
+    expect((await Trip.findById(mappedTrip._id)).seatLayout).toMatchObject({ rows: 2, columns: 2 });
   });
 
   test('concurrent bookings cannot take the last seat twice', async () => {

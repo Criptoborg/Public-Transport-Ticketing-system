@@ -275,6 +275,7 @@ export function TripDetails() {
   const navigate = useNavigate();
   const [trip, setTrip] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const [selectedSeats, setSelectedSeats] = useState([]);
   const [bookingId, setBookingId] = useState(null);
   const [state, setState] = useState({
     loading: true,
@@ -294,7 +295,8 @@ export function TripDetails() {
     try {
       let resolvedBookingId = existingBookingId;
       if (!resolvedBookingId) {
-        const bookingResponse = unwrap(await api.post("/api/tickets/createticket", { trip: id, quantity }));
+        const bookingBody = { trip: id, quantity, ...(trip.seatMap ? { seats: selectedSeats } : {}) };
+        const bookingResponse = unwrap(await api.post("/api/tickets/createticket", bookingBody));
         resolvedBookingId = bookingResponse.data.bookingId;
         setBookingId(resolvedBookingId);
       }
@@ -360,6 +362,18 @@ export function TripDetails() {
             ))}
           </select>
         </label>
+        {trip.seatMap && <section className="seat-map-section" aria-label="Seat map">
+          <div className="section-heading"><h2>Choose {quantity} seat{quantity === 1 ? "" : "s"}</h2><span>{selectedSeats.length} of {quantity} selected</span></div>
+          <div className="seat-map" style={{ "--seat-columns": trip.seatMap.columns }}>
+            {Array.from({ length: trip.seatMap.rows * trip.seatMap.columns }, (_, index) => {
+              const seatNumber = `${Math.floor(index / trip.seatMap.columns) + 1}${String.fromCharCode(65 + (index % trip.seatMap.columns))}`;
+              const occupied = trip.seatMap.occupiedSeats?.includes(seatNumber);
+              const selected = selectedSeats.includes(seatNumber);
+              return <button type="button" className={`seat-button${occupied ? " occupied" : ""}${selected ? " selected" : ""}`} aria-label={`Seat ${seatNumber}${occupied ? ", unavailable" : selected ? ", selected" : ""}`} aria-pressed={selected} disabled={occupied || (!selected && selectedSeats.length >= quantity)} key={seatNumber} onClick={() => setSelectedSeats((current) => selected ? current.filter((seat) => seat !== seatNumber) : [...current, seatNumber])}>{seatNumber}</button>;
+            })}
+          </div>
+          <div className="seat-legend"><span><i className="seat-key available" />Available</span><span><i className="seat-key selected" />Selected</span><span><i className="seat-key occupied" />Unavailable</span></div>
+        </section>}
         <div className="price-summary">
           <span>{money(route.fare)} × {quantity}</span>
           <strong>{money(Number(route.fare) * quantity)}</strong>
@@ -370,7 +384,8 @@ export function TripDetails() {
           disabled={
             state.booking ||
             trip.status !== "scheduled" ||
-            trip.availableSeats < 1
+            trip.availableSeats < quantity ||
+            (trip.seatMap && selectedSeats.length !== quantity)
           }
           onClick={() => startPayment()}
         >
