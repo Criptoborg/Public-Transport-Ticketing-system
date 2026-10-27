@@ -12,4 +12,7 @@ const ticketSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+ticketSchema.index({ user: 1, createdAt: -1 });
+ticketSchema.index({ trip: 1 });
+
 module.exports = mongoose.model('Ticket', ticketSchema);

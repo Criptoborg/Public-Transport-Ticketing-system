@@ -191,7 +191,10 @@ FRONTEND_URL=http://localhost:5173
 OPENROUTESERVICE_API_KEY=your_openrouteservice_api_key
 BASE_FARE=300
 FARE_PER_KM=70
+CANCEL_CUTOFF_HOURS=2
 ```
+
+`CANCEL_CUTOFF_HOURS` sets the minimum time before departure when a ticket may be cancelled; it defaults to 2 hours. Passwords must contain at least 8 characters, including a letter and a number.
 
 Start the backend development server:
 

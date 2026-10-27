@@ -18,11 +18,16 @@ FRONTEND_URL=http://localhost:5173
 OPENROUTESERVICE_API_KEY=your_openrouteservice_api_key
 BASE_FARE=300
 FARE_PER_KM=70
+CANCEL_CUTOFF_HOURS=2
 ```
+
+`CANCEL_CUTOFF_HOURS` sets the minimum time before departure when a ticket may be cancelled; it defaults to 2 hours. Passwords must contain at least 8 characters, including a letter and a number.
 
 4. Start development mode with `npm run dev`, or production mode with `npm start`.
 
 The API runs at `http://localhost:5000` by default. No backend files are required outside this `backend/` directory; the root `.gitignore` ignores dependencies and secrets.
+
+In production, set `FRONTEND_URL` to the allowed frontend origin(s), separated by commas if needed. Development additionally permits `http://localhost:5173`. API lists accept `page` and `limit` (default 1 and 20, limit capped at 100) and return pagination details in `meta` while keeping the result array in `data`.
 
 ## Authentication
 
@@ -55,7 +60,7 @@ Successful responses use `{ "success": true, "message": "...", "data": ... }`. E
 
 | Method | URL | Auth | Purpose |
 |---|---|---|---|
-| POST | `/api/auth/register` | No | Register a passenger. Body: `{ "name", "email", "password" }`; password must be at least 6 characters. |
+| POST | `/api/auth/register` | No | Register a passenger. Body: `{ "name", "email", "password" }`; password must be at least 8 characters and contain a letter and a number. |
 | POST | `/api/auth/login` | No | Log in. Body: `{ "email", "password" }`; returns a one-day JWT and safe user data. |
 | POST | `/api/auth/forgot-password` | No | Request a reset link. Body: `{ "email" }`; always returns a generic success message. |
 | POST | `/api/auth/reset-password` | No | Set a new password. Body: `{ "token", "newPassword" }`; token expires after 15 minutes. |

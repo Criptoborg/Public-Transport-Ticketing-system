@@ -8,8 +8,17 @@ describe('General API', () => {
     expect(response.statusCode).toBe(200);
     expect(response.body).toEqual({
       success: true,
-      message: 'Public Transport Ticketing API is running'
+      message: 'Public Transport Ticketing API is running',
+      data: null
     });
+  });
+
+  test('health endpoint reports database connection state', async () => {
+    const response = await request(app).get('/health');
+
+    expect(response.statusCode).toBe(503);
+    expect(response.body.success).toBe(false);
+    expect(response.body.data.database).toBe('disconnected');
   });
 
   test('unknown endpoint returns 404', async () => {

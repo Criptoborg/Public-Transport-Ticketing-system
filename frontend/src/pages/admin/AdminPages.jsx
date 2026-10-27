@@ -543,6 +543,16 @@ const date = (value) =>
     dateStyle: "medium",
     timeStyle: "short",
   });
+function Pagination({ page, pages, onChange }) {
+  if (pages <= 1) return null;
+  return (
+    <nav className="pagination" aria-label="Pagination">
+      <button className="button button-quiet" disabled={page <= 1} onClick={() => onChange(page - 1)}>Previous</button>
+      <span>Page {page} of {pages}</span>
+      <button className="button button-quiet" disabled={page >= pages} onClick={() => onChange(page + 1)}>Next</button>
+    </nav>
+  );
+}
 
 // --- NEW LAYOUT WRAPPER WITH SIDEBAR ---
 function AdminPageLayout({ eyebrow, title, children }) {
@@ -571,9 +581,9 @@ export function AdminDashboard() {
       api.get("/api/admin/tickets"),
     ]).then(([routes, trips, tickets]) =>
       setCounts({
-        routes: unwrap(routes).data?.length || 0,
-        trips: unwrap(trips).data?.length || 0,
-        tickets: unwrap(tickets).data?.length || 0,
+        routes: unwrap(routes).meta?.total ?? unwrap(routes).data?.length ?? 0,
+        trips: unwrap(trips).meta?.total ?? unwrap(trips).data?.length ?? 0,
+        tickets: unwrap(tickets).meta?.total ?? unwrap(tickets).data?.length ?? 0,
       }),
     );
   }, []);
@@ -612,6 +622,8 @@ export function AdminRoutes() {
   const [routes, setRoutes] = useState([]);
   const [form, setForm] = useState(blankRoute);
   const [editing, setEditing] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
   const [state, setState] = useState({
     loading: true,
     saving: false,
@@ -619,16 +631,20 @@ export function AdminRoutes() {
     success: "",
   });
   
-  const load = () =>
+  const load = (currentPage = page) =>
     api
-      .get("/api/routes")
-      .then((response) => setRoutes(unwrap(response).data || []))
+      .get("/api/routes", { params: { page: currentPage, limit: 20 } })
+      .then((response) => {
+        const result = unwrap(response);
+        setRoutes(result.data || []);
+        setPages(result.meta?.pages || 1);
+      })
       .catch((err) => setState((s) => ({ ...s, error: apiError(err) })))
       .finally(() => setState((s) => ({ ...s, loading: false })));
       
   useEffect(() => {
     load();
-  }, []);
+  }, [page]);
   
   const submit = async (event) => {
     event.preventDefault();
@@ -794,6 +810,7 @@ export function AdminRoutes() {
               </article>
             ))
           )}
+          {!state.loading && <Pagination page={page} pages={pages} onChange={setPage} />}
         </div>
       </div>
     </AdminPageLayout>
@@ -813,6 +830,8 @@ export function AdminTrips() {
   const [trips, setTrips] = useState([]);
   const [form, setForm] = useState(blankTrip);
   const [editing, setEditing] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
   const [state, setState] = useState({
     loading: true,
     saving: false,
@@ -820,18 +839,20 @@ export function AdminTrips() {
     success: "",
   });
   
-  const load = () =>
-    Promise.all([api.get("/api/routes"), api.get("/api/trips")])
+  const load = (currentPage = page) =>
+    Promise.all([api.get("/api/routes", { params: { limit: 100 } }), api.get("/api/trips", { params: { page: currentPage, limit: 20 } })])
       .then(([routeResponse, tripResponse]) => {
         setRoutes(unwrap(routeResponse).data || []);
-        setTrips(unwrap(tripResponse).data || []);
+        const result = unwrap(tripResponse);
+        setTrips(result.data || []);
+        setPages(result.meta?.pages || 1);
       })
       .catch((err) => setState((s) => ({ ...s, error: apiError(err) })))
       .finally(() => setState((s) => ({ ...s, loading: false })));
       
   useEffect(() => {
     load();
-  }, []);
+  }, [page]);
   
   const submit = async (event) => {
     event.preventDefault();
@@ -976,6 +997,7 @@ export function AdminTrips() {
               </article>
             ))
           )}
+          {!state.loading && <Pagination page={page} pages={pages} onChange={setPage} />}
         </div>
       </div>
     </AdminPageLayout>
@@ -985,17 +1007,23 @@ export function AdminTrips() {
 export function AdminTickets() {
   const [tickets, setTickets] = useState([]);
   const [state, setState] = useState({ loading: true, error: "" });
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
   
-  const load = () =>
+  const load = (currentPage = page) =>
     api
-      .get("/api/admin/tickets")
-      .then((response) => setTickets(unwrap(response).data || []))
+      .get("/api/admin/tickets", { params: { page: currentPage, limit: 20 } })
+      .then((response) => {
+        const result = unwrap(response);
+        setTickets(result.data || []);
+        setPages(result.meta?.pages || 1);
+      })
       .catch((err) => setState({ loading: false, error: apiError(err) }))
       .finally(() => setState((s) => ({ ...s, loading: false })));
       
   useEffect(() => {
     load();
-  }, []);
+  }, [page]);
   
   const update = async (id, status) => {
     try {
@@ -1033,6 +1061,7 @@ export function AdminTickets() {
           ))}
         </div>
       )}
+      {!state.loading && <Pagination page={page} pages={pages} onChange={setPage} />}
     </AdminPageLayout>
   );
 }

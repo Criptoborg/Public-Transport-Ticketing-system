@@ -1,0 +1,17 @@
+# Phase Progress
+
+## Phase 1: Security and Backend Hardening
+
+**Status:** Implemented on `feature/hardening-and-payments`; committed after final checks.
+
+**Changes:** Restricted browser CORS to configured origins plus the development origin, added Helmet, general/auth rate limits, a 32 KB JSON cap, database-aware `/health`, and SIGTERM shutdown. Hardened auth validation and database-backed roles, escaped route search, generated cryptographic ticket references with collision retries, whitelisted updates, protected referential integrity, enforced trip time/cancellation rules, added ticket cancellation handling, pagination metadata/UI, model indexes, and removed the unused backend React Router dependency.
+
+**Files touched:** `.github/copilot-instructions.md`, root and backend READMEs, `API_DOCUMENTATION.md`, backend env/package files and source/tests, frontend passenger/admin/auth pages and styles, plus this report.
+
+**Verification:** Frontend `npm run build` passed. Backend tests passed in isolated Jest invocations: 24 tests across the health/auth, authorization, resource-validation, middleware-security, and utility suites. The default Jest transform cannot load the incomplete local `caniuse-lite` installation; tests were run using `--transform='{}'`. `npm audit --omit=dev --offline` reported 0 vulnerabilities. Node syntax checks were also run for backend JavaScript.
+
+**Decisions / remaining:** Duplicate registration returns a generic `201` response to avoid account enumeration. Old trips derive total capacity from remaining seats plus recorded ticket history when first updated/cancelled. Cancellation cutoff defaults to 2 hours and is server-time based. Phase 1 does not queue refunds because the payment/refund model is part of the unsupplied Phase 3 requirements. Full controller-level coverage for seat rollback, cutoffs, referential conflicts, and paginated database queries remains a test gap. The prompt's exact Phase 9 item 6 privacy wording was not supplied; current instructions record the privacy rule that was present in the prompt.
+
+## Next
+
+Provide Phases 2–9, including the exact Phase 9 item 6 privacy requirement, to continue without inventing scope. The requested launch video is not produced yet; the remaining workflow and video acceptance requirements were not included.

@@ -1,11 +1,16 @@
 const mongoose = require('mongoose');
 const TicketController = require('./TicketController');
 const Ticket = require('../models/Ticket');
+const getPagination = require('../utils/pagination');
 
 const getTickets = async (req, res, next) => {
   try {
-    const tickets = await TicketController.ticketDetails();
-    res.json({ success: true, message: 'Issued tickets retrieved successfully', data: tickets });
+    const { page, limit, skip } = getPagination(req.query);
+    const [tickets, total] = await Promise.all([
+      TicketController.ticketDetails().skip(skip).limit(limit),
+      Ticket.countDocuments()
+    ]);
+    res.json({ success: true, message: 'Issued tickets retrieved successfully', data: tickets, meta: { page, limit, total, pages: Math.ceil(total / limit) } });
   } catch (error) { next(error); }
 };
 

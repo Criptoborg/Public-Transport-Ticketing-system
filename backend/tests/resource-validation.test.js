@@ -1,5 +1,7 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
+jest.mock('../src/models/User', () => ({ findById: jest.fn() }));
+const User = require('../src/models/User');
 const app = require('../src/app');
 
 describe('Resource ID validation', () => {
@@ -19,6 +21,12 @@ describe('Resource ID validation', () => {
       process.env.JWT_SECRET,
       { expiresIn: '5m' }
     );
+  });
+
+  beforeEach(() => {
+    User.findById.mockImplementation((id) => ({
+      select: () => ({ lean: async () => ({ _id: id, role: id === '507f1f77bcf86cd799439012' ? 'admin' : 'passenger' }) })
+    }));
   });
 
   afterAll(() => {

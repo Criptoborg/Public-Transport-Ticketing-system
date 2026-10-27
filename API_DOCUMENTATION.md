@@ -55,6 +55,8 @@ Errors generally follow:
 }
 ```
 
+Paginated list responses keep the result array in `data` and add a sibling `meta` object: `{ "page", "limit", "total", "pages" }`. Supported list endpoints accept `page` (default 1) and `limit` (default 20, maximum 100).
+
 ---
 
 ## Health Check
@@ -102,7 +104,7 @@ Creates a new passenger account. New users receive the `passenger` role by defau
 
 - `name`, `email`, and `password` are required.
 - Email must be valid.
-- Password must contain at least 6 characters.
+- Password must contain at least 8 characters, including a letter and a number.
 - Email must not already be registered.
 
 **Success:** `201 Created`

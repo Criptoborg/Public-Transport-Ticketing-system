@@ -30,6 +30,20 @@ function PageTitle({ eyebrow, title, children }) {
     </div>
   );
 }
+function Pagination({ page, pages, onChange }) {
+  if (pages <= 1) return null;
+  return (
+    <nav className="pagination" aria-label="Pagination">
+      <button className="button button-quiet" disabled={page <= 1} onClick={() => onChange(page - 1)}>
+        Previous
+      </button>
+      <span>Page {page} of {pages}</span>
+      <button className="button button-quiet" disabled={page >= pages} onClick={() => onChange(page + 1)}>
+        Next
+      </button>
+    </nav>
+  );
+}
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -140,16 +154,22 @@ export function Trips() {
   const [filters, setFilters] = useState({ search: "", status: "scheduled" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
   useEffect(() => {
     setLoading(true);
     api
       .get("/api/trips", {
-        params: filters.status ? { status: filters.status } : {},
+        params: { page, limit: 20, ...(filters.status ? { status: filters.status } : {}) },
       })
-      .then((response) => setTrips(unwrap(response).data || []))
+      .then((response) => {
+        const result = unwrap(response);
+        setTrips(result.data || []);
+        setPages(result.meta?.pages || 1);
+      })
       .catch((err) => setError(apiError(err)))
       .finally(() => setLoading(false));
-  }, [filters.status]);
+  }, [filters.status, page]);
   const visible = trips.filter((trip) => {
     const value =
       `${trip.route?.origin} ${trip.route?.destination}`.toLowerCase();
@@ -188,6 +208,7 @@ export function Trips() {
       ) : (
         <div className="empty-state">No trips match this search.</div>
       )}
+      {!loading && <Pagination page={page} pages={pages} onChange={setPage} />}
     </main>
   );
 }
@@ -326,15 +347,21 @@ export function TripDetails() {
 export function Tickets() {
   const [tickets, setTickets] = useState([]);
   const [state, setState] = useState({ loading: true, error: "" });
-  const load = () =>
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const load = (currentPage = page) =>
     api
-      .get("/api/tickets/my-tickets")
-      .then((response) => setTickets(unwrap(response).data || []))
+      .get("/api/tickets/my-tickets", { params: { page: currentPage, limit: 20 } })
+      .then((response) => {
+        const result = unwrap(response);
+        setTickets(result.data || []);
+        setPages(result.meta?.pages || 1);
+      })
       .catch((err) => setState({ loading: false, error: apiError(err) }))
       .finally(() => setState((current) => ({ ...current, loading: false })));
   useEffect(() => {
     load();
-  }, []);
+  }, [page]);
   const cancel = async (id) => {
     if (!window.confirm("Cancel this ticket?")) return;
     try {
@@ -369,6 +396,7 @@ export function Tickets() {
           </Link>
         </div>
       )}
+      {!state.loading && <Pagination page={page} pages={pages} onChange={setPage} />}
     </main>
   );
 }

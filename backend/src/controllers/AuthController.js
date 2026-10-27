@@ -7,28 +7,36 @@ const { sendWelcomeEmail, sendPasswordResetEmail } = require('../services/emailS
 const safeUser = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role });
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const isValidPassword = (password) => typeof password === 'string'
+  && password.length >= 8
+  && /[A-Za-z]/.test(password)
+  && /\d/.test(password);
+const registrationResponse = {
+  success: true,
+  message: 'If registration is available for that email, a confirmation message will be sent.',
+  data: null
+};
 
 const register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
-    if (!name || !email || !password) {
+    if (typeof name !== 'string' || typeof email !== 'string' || typeof password !== 'string' || !name.trim() || !email || !password) {
       return res.status(400).json({ success: false, message: 'Name, email and password are required', data: null });
     }
     if (!isValidEmail(email)) {
       return res.status(400).json({ success: false, message: 'Please provide a valid email address', data: null });
     }
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long', data: null });
+    if (!isValidPassword(password)) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters and include a letter and a number', data: null });
     }
-    if (await User.findOne({ email: email.toLowerCase() })) {
-      return res.status(409).json({ success: false, message: 'Email is already registered', data: null });
-    }
+    if (await User.findOne({ email: email.toLowerCase() })) return res.status(201).json(registrationResponse);
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({ name, email, password: hashedPassword });
     sendWelcomeEmail(user).catch((error) => console.error('Welcome email failed:', error.message));
-    res.status(201).json({ success: true, message: 'Registration successful', data: { user: safeUser(user) } });
+    res.status(201).json(registrationResponse);
   } catch (error) {
+    if (error.code === 11000) return res.status(201).json(registrationResponse);
     next(error);
   }
 };
@@ -36,7 +44,7 @@ const register = async (req, res, next) => {
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
       return res.status(400).json({ success: false, message: 'Email and password are required', data: null });
     }
 
@@ -57,7 +65,7 @@ const forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
     const genericResponse = { success: true, message: 'If an account exists with that email, a password reset link has been sent.', data: null };
-    if (!email || !isValidEmail(email)) return res.json(genericResponse);
+    if (typeof email !== 'string' || !isValidEmail(email)) return res.json(genericResponse);
 
     const user = await User.findOne({ email: email.toLowerCase() }).select('+passwordResetToken +passwordResetExpires');
     if (!user) return res.json(genericResponse);
@@ -77,7 +85,7 @@ const resetPassword = async (req, res, next) => {
   try {
     const { token, newPassword } = req.body;
     if (typeof token !== 'string' || typeof newPassword !== 'string' || !token || !newPassword) return res.status(400).json({ success: false, message: 'Reset token and new password are required', data: null });
-    if (newPassword.length < 6) return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long', data: null });
+    if (!isValidPassword(newPassword)) return res.status(400).json({ success: false, message: 'Password must be at least 8 characters and include a letter and a number', data: null });
 
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     const user = await User.findOne({ passwordResetToken: hashedToken, passwordResetExpires: { $gt: new Date() } }).select('+passwordResetToken +passwordResetExpires');

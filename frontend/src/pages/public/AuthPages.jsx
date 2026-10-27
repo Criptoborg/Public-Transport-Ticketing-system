@@ -93,10 +93,10 @@ export function Register() {
   });
   const submit = async (event) => {
     event.preventDefault();
-    if (form.password.length < 6)
+    if (form.password.length < 8 || !/[A-Za-z]/.test(form.password) || !/\d/.test(form.password))
       return setState({
         ...state,
-        error: "Password must be at least 6 characters long.",
+        error: "Password must be at least 8 characters and include a letter and a number.",
       });
     setState({ loading: true, error: "", success: "" });
     try {
@@ -132,7 +132,8 @@ export function Register() {
         <Field
           label="Password"
           type="password"
-          minLength="6"
+          minLength="8"
+          pattern="(?=.*[A-Za-z])(?=.*[0-9]).{8,}"
           required
           value={form.password}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -201,10 +202,10 @@ export function ResetPassword() {
   });
   const submit = async (event) => {
     event.preventDefault();
-    if (form.newPassword.length < 6)
+    if (form.newPassword.length < 8 || !/[A-Za-z]/.test(form.newPassword) || !/\d/.test(form.newPassword))
       return setState({
         ...state,
-        error: "Password must be at least 6 characters long.",
+        error: "Password must be at least 8 characters and include a letter and a number.",
       });
     if (form.newPassword !== form.confirm)
       return setState({ ...state, error: "Passwords do not match." });
@@ -230,7 +231,8 @@ export function ResetPassword() {
         <Field
           label="New password"
           type="password"
-          minLength="6"
+          minLength="8"
+          pattern="(?=.*[A-Za-z])(?=.*[0-9]).{8,}"
           required
           value={form.newPassword}
           onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
@@ -238,7 +240,8 @@ export function ResetPassword() {
         <Field
           label="Confirm password"
           type="password"
-          minLength="6"
+          minLength="8"
+          pattern="(?=.*[A-Za-z])(?=.*[0-9]).{8,}"
           required
           value={form.confirm}
           onChange={(e) => setForm({ ...form, confirm: e.target.value })}
