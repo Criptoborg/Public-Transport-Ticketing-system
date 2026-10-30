@@ -29,6 +29,8 @@ BOARDING_WINDOW_AFTER_MINUTES=30
 
 `CANCEL_CUTOFF_HOURS` sets the minimum time before departure when a passenger may cancel; it defaults to 2 hours. `PAYSTACK_SECRET_KEY` is a backend-only Paystack test/live key and must never be exposed in frontend configuration. `PAYSTACK_CALLBACK_URL` defaults to `${FRONTEND_URL}/payment/callback`. `PENDING_TICKET_MINUTES` defaults to 15. Passwords must contain at least 8 characters, including a letter and a number.
 
+If the Node.js DNS resolver cannot resolve an Atlas `mongodb+srv` URI on your network, optionally set `MONGODB_DNS_SERVERS` to a comma-separated DNS server list (for example, your router's DNS address). Leave it blank on networks where Node's default DNS works.
+
 `TRIP_REMINDER_INTERVAL_MINUTES` controls the reminder job scan interval (default 1 minute); eligible paid tickets are emailed once as they reach approximately three hours before departure.
 
 The canonical pending-booking payment API uses `POST /api/payments/initialize` with a booking/ticket ID and the signed webhook at `/api/payments/webhook`. The pre-existing trip-based payment API is retained separately under `/api/payments/legacy`: initialize with `tripId`/`quantity`, verify by reference, and read a payment by ID. Its independent `Payment` records and `PAYMENT_TIMEOUT_MINUTES` remain for compatibility; new frontend work should use the canonical pending-booking API. `BACKEND_URL` is used for the legacy callback fallback; `PAYSTACK_PUBLIC_KEY` is a client-facing provider key and must contain only the Paystack public key, never the secret.
